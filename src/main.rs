@@ -1,12 +1,17 @@
-use axum::{routing::get, Router};
+mod model;
+
+use axum::{routing::get, Router, Json};
 use axum::http::{HeaderValue, Method};
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use serde_json::Value;
+use socketioxide::adapter::Room;
 use socketioxide::extract::{Data, SocketRef};
 use socketioxide::SocketIo;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::fmt;
+use crate::model::General;
 // use tracing::subscriber::set_global_default;
 // use tokio::net::TcpListener;
 
@@ -16,6 +21,19 @@ pub async fn on_connect(socket: SocketRef) {
     // socket.on("message", |_socket: SocketRef, Data::<dyn Value>(data)| {
     //     info!("Message: {:?}", data);
     // });
+
+    socket.on("join_room", |_socket: SocketRef, Data::<General>(data) | async move {
+        let general = General {
+            room: data.room.clone(),
+            message: data.message.clone()
+        };
+        info!("General: {:?}", &general);
+
+        _socket.join(general.room.clone()).ok();
+
+        _socket.within(general.room.clone()).emit("message", format!("Room joined by client: {}", _socket.id)).ok();
+    });
+
     socket.on("message", |_socket: SocketRef, Data::<serde_json::Value>(data)| {
         info!("Message: {:?}", data);
     });
