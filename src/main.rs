@@ -1,9 +1,10 @@
 mod model;
 
-use axum::{routing::get, Router};
+use axum::{routing::get, Router, Json};
 use axum::extract::State;
-use axum::http::{HeaderValue, Method};
+use axum::http::{HeaderValue, Method, StatusCode};
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use axum::response::IntoResponse;
 use axum::routing::post;
 use serde_json::Value;
 use socketioxide::extract::{Data, SocketRef};
@@ -55,6 +56,30 @@ pub async fn http_socket_handler(State(io): State<SocketIo>) {
     let _ = io.emit("message", "Hello from server");
 }
 
+
+/// Handling the POST request from the client
+
+pub async fn http_socket_post_handler(
+    State(io): State<SocketIo>,
+    Json(data): Json<GeneralRequest>
+) -> Result<impl IntoResponse,(StatusCode, Json<Value>)> {
+    let general = GeneralRequest {
+        room: data.room.clone(),
+        message: data.message.clone()
+    };
+    info!("General: {:?}", &general);
+
+    let response = GeneralResponse {
+        room: general.room.clone(),
+        message: format!("Room joined by client: {}", "HTTP Request").to_owned(),
+        date_time: chrono::Utc::now()
+    };
+
+    io.within(general.room.clone()).emit("response", response.clone()).ok();
+
+    Ok((StatusCode::OK, Json::<GeneralResponse>(response)))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     const PORT: i32 = 4040;
@@ -96,7 +121,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let app: Router = Router::new()
         .route("/", get(|| async { "Server Running" }))
         .route("/socket-test",get(http_socket_handler)) // handle GET request on /socket-test namespace
-        .route("/post", post(|| async { "POST Request"}))
+        // .route("/post", post(|| async { "POST Request"}))
+        .route("/post", post(http_socket_post_handler))
         .with_state(io) // handle state and http events
         .layer(
             ServiceBuilder::new()

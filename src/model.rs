@@ -7,7 +7,7 @@ pub struct GeneralRequest {
     pub message: String
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct GeneralResponse {
     pub room: String,
     pub message: String,
