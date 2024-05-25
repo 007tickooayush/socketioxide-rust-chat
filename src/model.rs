@@ -1,7 +1,15 @@
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct General {
+#[derive(Debug, Deserialize)]
+pub struct GeneralRequest {
     pub room : String,
     pub message: String
+}
+
+#[derive(Debug, Serialize)]
+pub struct GeneralResponse {
+    pub room: String,
+    pub message: String,
+    pub date_time: DateTime<chrono::Utc>
 }
