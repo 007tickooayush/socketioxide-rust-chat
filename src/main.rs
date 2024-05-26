@@ -4,6 +4,7 @@ mod http_routes;
 mod db;
 mod http_handlers;
 mod errors;
+mod db_model;
 
 use std::sync::Arc;
 use axum::{routing::get, Router, Json};
