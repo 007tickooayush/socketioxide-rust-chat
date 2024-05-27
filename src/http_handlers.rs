@@ -4,7 +4,6 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
 use serde_json::Value;
-use socketioxide::SocketIo;
 use tracing::{info, warn};
 use crate::AppState;
 use crate::model::{GeneralRequest, GeneralResponse};

@@ -1,19 +1,21 @@
+use std::sync::Arc;
 use serde_json::Value;
-use socketioxide::extract::{Data, SocketRef};
+use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
 use crate::model::{GeneralRequest, GeneralResponse};
+use crate::socket_state::SocketState;
 
-pub async fn on_connect(socket: SocketRef) {
+pub async fn on_connect(socket: SocketRef, ) {
     info!("Socket Connected: {:?}", socket.id);
 
     // socket.on("message", |_socket: SocketRef, Data::<dyn Value>(data)| {
     //     info!("Message: {:?}", data);
     // });
 
-    socket.on("join_room", |_socket: SocketRef, Data::<GeneralRequest>(data) | async move {
+    socket.on("join_room",|_socket: SocketRef, Data::<GeneralRequest>(data), socket_state: State<Arc<SocketState>>| async move {
         let general = GeneralRequest {
             room: data.room.clone(),
-            message: data.message.clone()
+            message: data.message.clone(),
         };
         info!("General: {:?}", &general);
 
@@ -22,18 +24,17 @@ pub async fn on_connect(socket: SocketRef) {
         let response = GeneralResponse {
             room: general.room.clone(),
             message: format!("Room joined by client: {}", _socket.id).to_owned(),
-            date_time: chrono::Utc::now()
+            date_time: chrono::Utc::now(),
         };
 
         _socket.within(general.room.clone()).emit("response", response).ok();
     });
 
-    socket.on("private", |_socket: SocketRef, Data::<Value>(data)| async move {
+    socket.on("private", |_socket: SocketRef, Data::<Value>(data), socket_state: State<Arc<SocketState>>| async move {
         info!("Private: {:?}", data);
-
     });
 
-    socket.on("message", |_socket: SocketRef, Data::<serde_json::Value>(data)| {
+    socket.on("message", |_socket: SocketRef, Data::<Value>(data), socket_state: State<Arc<SocketState>>| async move {
         info!("Message: {:?}", data);
     });
 }
