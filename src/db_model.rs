@@ -11,7 +11,7 @@ pub struct SocketCollection {
 
 }
 
-#[derive(Debug)]
+#[derive(Debug,Serialize,Deserialize)]
 pub struct MessageCollection{
     pub id: ObjectId,
     pub room: String,
