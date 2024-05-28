@@ -14,6 +14,10 @@ struct Messages {
 pub async fn on_connect(socket: SocketRef, ) {
     info!("Socket Connected: {:?}", socket.id);
 
+    /// Join a room and save the state of the room up to the message limit defined in the
+    /// `get_messages` function <br/>
+    /// *NOTE* The message reading is not being performed from the DB and is being read from the memory store
+    /// provided by the `SocketState` struct implementation through `socketioxide` >v8.0 library
     socket.on("join_room",|_socket: SocketRef, Data::<GeneralRequest>(data), socket_state: State<Arc<SocketState>>| async move {
         let general = GeneralRequest {
             room: data.room.clone(),
@@ -40,6 +44,10 @@ pub async fn on_connect(socket: SocketRef, ) {
         info!("Private: {:?}", data);
     });
 
+    /// Handling the message from the client <br/>
+    /// *NOTE:* The mechanism is not built for Ultra high throughput as OPS limit is not set and may exceed
+    /// if too many write operations are performed simultaneously <br/>
+    /// To resolve it and upgrade the server a Pub/Sub mechanism can be used to handle the ultra-high throughput requirements
     socket.on("message", |_socket: SocketRef, Data::<GeneralRequest>(data), socket_state: State<Arc<SocketState>>| async move {
         info!("Message: {:?}", data);
         let response = GeneralResponse {
@@ -48,20 +56,13 @@ pub async fn on_connect(socket: SocketRef, ) {
             date_time: chrono::Utc::now(),
         };
 
+        // INSERT THE MESSAGE INTO DB
         socket_state.insert(&data.room, Message {
             room: data.room.clone(),
             message: data.message.clone(),
             date_time: response.date_time.clone()
         }).await;
 
-        // INSERT THE MESSAGE INTO DB
-        // socket_state.db.insert_message(&data.room, Message {
-        //     room: data.room.clone(),
-        //     message: data.message.clone(),
-        //     date_time: response.date_time.clone()
-        // }).await.unwrap();
-
         _socket.within(data.room.clone()).emit("response", response).ok();
-
     });
 }
