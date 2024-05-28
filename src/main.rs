@@ -28,10 +28,12 @@ pub struct AppState {
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     const PORT: i32 = 4040;
 
+    let db = DB::connect_mongo().await.unwrap();
+
     /// For Logging the different events in the application in three categories (info, warn, error)
     tracing::subscriber::set_global_default(fmt::Subscriber::default()).unwrap();
 
-    let socket_state = Arc::new(socket_state::SocketState::default());
+    let socket_state = Arc::new(socket_state::SocketState::new(db.clone()));
     let (layer, io) = SocketIo::builder()
         .with_state(socket_state)
         .build_layer();
@@ -45,7 +47,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
-    let db = DB::connect_mongo().await.unwrap();
 
     let app = create_router(Arc::new(AppState { io: io.clone(), db: db.clone() }))
         .layer(

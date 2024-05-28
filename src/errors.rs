@@ -19,6 +19,8 @@ pub enum MyError {
     InvalidIDError(String),
     #[error("Record with ID: {0} not found")]
     NotFoundError(String),
+    #[error("Internal error")]
+    OwnError(String)
 }
 
 #[derive(Serialize)]
@@ -84,6 +86,13 @@ impl Into<(StatusCode, Json<serde_json::Value>)> for MyError {
                 ErrorResponse {
                     status: "error",
                     message: format!("MongoDB error: {}", e),
+                },
+            ),
+            MyError::OwnError(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse {
+                    status: "error",
+                    message: format!("Internal error: {}", e),
                 },
             ),
         };

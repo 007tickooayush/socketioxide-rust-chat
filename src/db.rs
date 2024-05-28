@@ -57,11 +57,23 @@ impl DB {
 }
 
 impl DB {
-    pub async fn insert_message(&self, room: &str, message: Message) -> Result<()> {
+    pub async fn insert_message(&self, room: &str, message: Message) -> Result<MessageCollection> {
+
         if let Some(messages_collection) = &self.messages_collection {
-            let message = self.message_to_doc(message);
-            messages_collection.insert_one(message, None).await?;
+            let doc = self.message_to_doc(message.clone());
+            let insert_res = messages_collection.insert_one(doc, None).await.unwrap();
+
+            let oid = insert_res.inserted_id.as_object_id().expect("Failed to get the inserted id");
+
+            Ok(MessageCollection {
+                id: oid.clone(),
+                room: room.to_owned(),
+                message: message.message,
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            })
+        } else {
+            Err(MyError::OwnError(String::from("Messages collection not found")))
         }
-        Ok(())
     }
 }

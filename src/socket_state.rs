@@ -9,13 +9,22 @@ pub type RoomStore = HashMap<String, VecDeque<Message>>;
 /// *This is a shared state between the WebSocket handlers*
 /// *The **tokio::sync::RwLock is used** to ensure that the messages are not accessed concurrently* and we have not used the std::sync::RwLock because it is not async
 /// and also implements the system default mechanism for priority of the threads
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct SocketState {
     pub db: DB,
     pub messages: RwLock<RoomStore>
 }
 
 impl SocketState {
+
+    /// Create a new instance of the SocketState
+    pub fn new(db: DB) -> Self {
+        Self {
+            db,
+            messages: RwLock::new(RoomStore::new())
+        }
+    }
+
     /// push the messages to top of the queue and insert the message to the database
     pub async fn insert(&self, room: &String, message: Message) {
         let mut _messages = self.messages.write().await;
