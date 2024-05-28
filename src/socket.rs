@@ -30,11 +30,11 @@ pub async fn on_connect(socket: SocketRef, ) {
         let messages = socket_state.get_messages(&general.room).await;
 
 
-        let response = GeneralResponse {
-            room: general.room.clone(),
-            message: format!("Room joined by client: {}", _socket.id).to_owned(),
-            date_time: chrono::Utc::now(),
-        };
+        // let response = GeneralResponse {
+        //     room: general.room.clone(),
+        //     message: format!("Room joined by client: {}", _socket.id).to_owned(),
+        //     date_time: chrono::Utc::now(),
+        // };
 
         // _socket.within(general.room.clone()).emit("response", response).ok();
         _socket.emit("messages",Messages{ messages }).ok();
@@ -57,10 +57,11 @@ pub async fn on_connect(socket: SocketRef, ) {
         };
 
         // INSERT THE MESSAGE INTO DB
+        // socket_state.db.
         socket_state.insert(&data.room, Message {
             room: data.room.clone(),
             message: data.message.clone(),
-            date_time: response.date_time.clone()
+            date_time: response.date_time.clone(),
         }).await;
 
         _socket.within(data.room.clone()).emit("response", response).ok();

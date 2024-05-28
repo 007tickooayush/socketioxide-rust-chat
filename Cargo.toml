@@ -19,6 +19,7 @@ tower-http = { version =  "0.5.2", features = ["cors"] }
 mongodb = { version = "2.5.0", features = ["bson-chrono-0_4"] }
 dotenv = "0.15.0"
 thiserror = "1.0.61"
+bson = "2.10.0"
 
 # PREVIOUS DEPENDENCIES
 # socketioxide = "0.8"
