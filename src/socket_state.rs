@@ -1,7 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 use tokio::sync::RwLock;
 use crate::db::DB;
-use crate::model::Message;
+use crate::db_model::{MessageCollection, PrivateMessageCollection};
+use crate::model::{Message, PrivateMessage, PrivateMessageReq};
 
 pub type RoomStore = HashMap<String, VecDeque<Message>>;
 
@@ -38,5 +39,36 @@ impl SocketState {
         let _messages = self.messages.read().await;
         let _room = _messages.get(room).cloned().unwrap_or_default();
         _room.into_iter().rev().collect()
+    }
+
+    pub async fn insert_private_messages(&self, message: PrivateMessageReq) -> PrivateMessage {
+        let sender = message.sender.clone().unwrap_or_else(|| "".to_string());
+
+        let private_msg = PrivateMessageCollection {
+            id: bson::oid::ObjectId::new(),
+            sender,
+            message: message.message.clone(),
+            receiver: message.receiver.clone(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now()
+        };
+        let resp = self.db.insert_private_message(private_msg).await.unwrap_or_else(|_| {
+            PrivateMessageCollection {
+                id: bson::oid::ObjectId::new(),
+                sender: "".to_string(),
+                receiver: "".to_string(),
+                message: String::from("Error: Message not sent!"),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now()
+            }
+        });
+
+        PrivateMessage {
+            message: resp.message,
+            sender: resp.sender,
+            receiver: resp.receiver,
+            date_time: resp.created_at
+        }
+
     }
 }

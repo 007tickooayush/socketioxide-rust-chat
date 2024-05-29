@@ -18,7 +18,6 @@ pub async fn on_connect(socket: SocketRef, ) {
     /// and store the list of key value pair in the memory store or in the DB
 
     socket.join(socket.id.clone()).ok();
-    info!("Socket Rooms: {:?}", socket.rooms());
 
     /// Join a room and save the state of the room up to the message limit defined in the
     /// `get_messages` function <br/>
@@ -52,12 +51,15 @@ pub async fn on_connect(socket: SocketRef, ) {
             Some(sender) => sender,
             None => _socket.id.clone().to_string()
         };
-        let response = PrivateMessage {
-            message: format!("Private Message By Client: {}", data.message).to_owned(),
-            sender: sender.clone(),
+        let response = PrivateMessageReq {
+            message:  data.message.to_owned(),
+            sender: Some(sender),
             receiver: data.receiver.clone(),
-            date_time: chrono::Utc::now(),
         };
+
+        // INSERT THE MESSAGE INTO DB
+        socket_state.insert_private_messages(response.clone()).await;
+
         _socket.to(data.receiver.clone()).emit("resp",response).ok();
     });
 
@@ -74,7 +76,6 @@ pub async fn on_connect(socket: SocketRef, ) {
         };
 
         // INSERT THE MESSAGE INTO DB
-        // socket_state.db.
         socket_state.insert(&data.room, Message {
             room: data.room.clone(),
             message: data.message.clone(),

@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let db = DB::connect_mongo().await.unwrap();
 
-    /// For Logging the different events in the application in three categories (info, warn, error)
+    // For Logging the different events in the application in three categories (info, warn, error)
     tracing::subscriber::set_global_default(fmt::Subscriber::default()).unwrap();
 
     let socket_state = Arc::new(socket_state::SocketState::new(db.clone()));

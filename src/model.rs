@@ -33,7 +33,7 @@ pub struct PrivateMessage {
     pub date_time: DateTime<chrono::Utc>
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone,Debug, Serialize, Deserialize)]
 pub struct PrivateMessageReq {
     pub message: String,
     pub sender: Option<String>,
