@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use serde::Serialize;
-use serde_json::Value;
 use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
 use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessage, PrivateMessageReq};

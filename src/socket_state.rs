@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use tokio::sync::RwLock;
 use crate::db::DB;
-use crate::db_model::{MessageCollection, PrivateMessageCollection};
+use crate::db_model::{PrivateMessageCollection};
 use crate::model::{Message, PrivateMessage, PrivateMessageReq};
 
 pub type RoomStore = HashMap<String, VecDeque<Message>>;

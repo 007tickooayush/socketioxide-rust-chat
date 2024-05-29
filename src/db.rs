@@ -5,7 +5,7 @@ use mongodb::{bson, Collection, IndexModel};
 use serde::de::DeserializeOwned;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
 use crate::errors::MyError;
-use crate::model::{Message, PrivateMessageReq};
+use crate::model::{Message};
 
 /// override the standard result type for the module
 type Result<T> = std::result::Result<T, MyError>;
