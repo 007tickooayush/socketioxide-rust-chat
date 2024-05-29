@@ -40,3 +40,20 @@ pub async fn http_socket_post_handler(
 
     Ok((StatusCode::OK, Json::<GeneralResponse>(response)))
 }
+
+/// *NOTE:*
+/// - The implementation is incomplete as is provided only for testing purposes, as List of Pair<String,String> is to be utilized rather than List of String.<br/>
+/// - Providing the list of sockets connected to the server creates a form of vulnerability, and is not to be used in realtime applications.<br/>
+/// <br/>
+/// The function can be upgraded to fetch the socket details stored in any storage system like Redis, MongoDB, etc.
+pub async fn http_sockets_list(State(app_state): State<Arc<AppState>>) -> impl IntoResponse {
+    let sockets: Vec<String> = app_state.io.sockets().unwrap().iter().map(|socket| {
+        socket.id.clone().to_string()
+    }).collect();
+
+    return if sockets.clone().is_empty() {
+        (StatusCode::NOT_FOUND, Json(vec![]))
+    } else {
+        (StatusCode::FOUND, Json(sockets))
+    }
+}

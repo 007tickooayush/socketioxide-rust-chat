@@ -57,7 +57,7 @@ impl DB {
 }
 
 impl DB {
-    pub async fn insert_message(&self, room: &str, message: Message) -> Result<MessageCollection> {
+    pub async fn insert_message(&self, message: Message) -> Result<MessageCollection> {
         if let Some(messages_collection) = &self.messages_collection {
             let doc = self.message_to_doc(&message).unwrap();
             let insert_res = match messages_collection.insert_one(&doc, None).await {

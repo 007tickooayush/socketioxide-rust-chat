@@ -30,7 +30,7 @@ impl SocketState {
         let mut _messages = self.messages.write().await;
         let _room = _messages.entry(room.clone()).or_default();
         _room.push_front(message.clone());
-        self.db.insert_message(room, message).await.unwrap();
+        self.db.insert_message(message).await.unwrap();
     }
 
     /// get the messages from the room but not read from the db

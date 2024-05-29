@@ -3,7 +3,7 @@ use serde::Serialize;
 use serde_json::Value;
 use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
-use crate::model::{GeneralRequest, GeneralResponse, Message};
+use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessage, PrivateMessageReq};
 use crate::socket_state::SocketState;
 
 #[derive(Serialize)]
@@ -13,6 +13,12 @@ struct Messages {
 
 pub async fn on_connect(socket: SocketRef, ) {
     info!("Socket Connected: {:?}", socket.id);
+
+    /// todo: INITIALIZE THE SOCKET IDS INTO A VARIABLE PAIRED TO A USERNAME <br/>
+    /// and store the list of key value pair in the memory store or in the DB
+
+    socket.join(socket.id.clone()).ok();
+    info!("Socket Rooms: {:?}", socket.rooms());
 
     /// Join a room and save the state of the room up to the message limit defined in the
     /// `get_messages` function <br/>
@@ -40,8 +46,19 @@ pub async fn on_connect(socket: SocketRef, ) {
         _socket.emit("messages",Messages{ messages }).ok();
     });
 
-    socket.on("private", |_socket: SocketRef, Data::<Value>(data), socket_state: State<Arc<SocketState>>| async move {
+    socket.on("private", |_socket: SocketRef, Data::<PrivateMessageReq>(data), socket_state: State<Arc<SocketState>>| async move {
         info!("Private: {:?}", data);
+        let sender = match data.sender.clone() {
+            Some(sender) => sender,
+            None => _socket.id.clone().to_string()
+        };
+        let response = PrivateMessage {
+            message: format!("Private Message By Client: {}", data.message).to_owned(),
+            sender: sender.clone(),
+            receiver: data.receiver.clone(),
+            date_time: chrono::Utc::now(),
+        };
+        _socket.to(data.receiver.clone()).emit("resp",response).ok();
     });
 
     /// Handling the message from the client <br/>
