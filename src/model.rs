@@ -21,6 +21,11 @@ pub struct Message{
     pub date_time: DateTime<chrono::Utc>
 }
 
+#[derive(Serialize)]
+pub struct Messages {
+    pub messages: Vec<Message>
+}
+
 /// Struct for handling the private messages <br/>
 /// It utilizes the `sender` and `receiver` (socket IDs) fields to send the message to the respective user <br/>
 /// For fetching the socket IDs the API endpoint can be used

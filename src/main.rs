@@ -6,6 +6,7 @@ mod http_handlers;
 mod errors;
 mod db_model;
 mod socket_state;
+mod socket_handlers;
 
 use std::sync::Arc;
 use axum::http::{HeaderValue, Method};
