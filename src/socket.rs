@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use socketioxide::extract::{SocketRef, State};
 use tracing::info;
-use crate::socket_handlers::{handle_default, handle_join_room, handle_message, handle_private};
+use crate::socket_handlers::{handle_join_room, handle_message, handle_private};
 use crate::socket_state::SocketState;
 
 /// todo: INITIALIZE THE SOCKET IDS INTO A VARIABLE PAIRED TO A USERNAME <br/>

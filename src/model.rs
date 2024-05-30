@@ -1,4 +1,3 @@
-use bson::oid::ObjectId;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 

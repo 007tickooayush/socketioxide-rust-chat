@@ -4,8 +4,6 @@ use mongodb::bson::{doc, Document};
 use mongodb::{bson, Collection, IndexModel};
 use mongodb::options::FindOptions;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
-use tracing::info;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
 use crate::errors::MyError;
 use crate::model::{Message, SocketResponse};

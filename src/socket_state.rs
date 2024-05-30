@@ -30,18 +30,18 @@ impl SocketState {
 
     /// Insert the socket id and the name into the socket map into `sockets_collection`
     /// ALSO Maintain a HashMap<String,String> for the socket id and the name
-    pub async fn insert_socket_name(&self, socket_id: String) -> (String, String) {
-        // GENERATE A RANDOM NAME FOR THE SOCKET ID AND INSERT INTO THE DB
-        let name = names::Generator::default().next().unwrap();
-
-        let mut _socket_map = self.socket_map.write().await;
-        _socket_map.insert(socket_id.clone(), name.clone());
-        // self.socket_map.write().await.insert(name.clone(), socket_id.clone());
-
-        self.db.insert_socket_name(name.clone(), socket_id.clone()).await.unwrap();
-
-        (name, socket_id)
-    }
+    // pub async fn insert_socket_name(&self, socket_id: String) -> (String, String) {
+    //     // GENERATE A RANDOM NAME FOR THE SOCKET ID AND INSERT INTO THE DB
+    //     let name = names::Generator::default().next().unwrap();
+    //
+    //     let mut _socket_map = self.socket_map.write().await;
+    //     _socket_map.insert(socket_id.clone(), name.clone());
+    //     // self.socket_map.write().await.insert(name.clone(), socket_id.clone());
+    //
+    //     self.db.insert_socket_name(name.clone(), socket_id.clone()).await.unwrap();
+    //
+    //     (name, socket_id)
+    // }
 
     /// push the messages to top of the queue and insert the message to the database
     pub async fn insert(&self, room: &String, message: Message) {

@@ -3,10 +3,9 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
-use serde_json::{json, Value};
+use serde_json::{Value};
 use tracing::{error, info, warn};
 use crate::AppState;
-use crate::db_model::SocketCollection;
 use crate::errors::MyError;
 use crate::model::{Filter, GeneralRequest, GeneralResponse, SocketResponse};
 
