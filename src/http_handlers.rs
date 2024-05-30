@@ -6,8 +6,9 @@ use axum::response::IntoResponse;
 use serde_json::{json, Value};
 use tracing::{error, info, warn};
 use crate::AppState;
+use crate::db_model::SocketCollection;
 use crate::errors::MyError;
-use crate::model::{Filter, GeneralRequest, GeneralResponse};
+use crate::model::{Filter, GeneralRequest, GeneralResponse, SocketResponse};
 
 /// ### In this handler, we are going to emit a message to the client using the HTTP request handler
 /// *i.e, whenever the HTTP endpoint is hit, we are going to emit a message to the client and in this case we are broadcasting the message across all clients*
@@ -34,6 +35,7 @@ pub async fn http_socket_post_handler(
         message: format!("Message By Client: {}", "HTTP Request").to_owned(),
         date_time: chrono::Utc::now()
     };
+    info!("Response: {:?}", &response);
 
     // not sending yet
     app_state.io.emit("response", response.clone()).ok();
@@ -50,7 +52,7 @@ pub async fn http_socket_post_handler(
 pub async fn http_sockets_list(
     filter: Option<Query<Filter>>,
     State(app_state): State<Arc<AppState>>
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, (StatusCode, Json<Vec<SocketResponse>>)> {
 
     // OLD IMPLEMENTATION
     /*let sockets: Vec<String> = app_state.io.sockets().unwrap().iter().map(|socket| {
@@ -72,11 +74,12 @@ pub async fn http_sockets_list(
 
     return match app_state.db.get_sockets(limit, page).await.map_err(MyError::from) {
         Ok(res) => {
-            (StatusCode::OK, Json(res))
+            // info!("Sockets: {:?}", res);
+            Ok((StatusCode::OK, Json(res)))
         },
         Err(e) => {
             error!("Error: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::new()))
+            Ok((StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::new())))
         }
     };
 

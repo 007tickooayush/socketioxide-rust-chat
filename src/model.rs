@@ -1,3 +1,4 @@
+use bson::oid::ObjectId;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
@@ -49,4 +50,14 @@ pub struct PrivateMessageReq {
 pub struct Filter {
     pub page: Option<usize>,
     pub limit: Option<usize>
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct SocketResponse {
+    #[serde(rename = "_id")]
+    pub id: String,
+    pub socket: String,
+    pub username: String,
+    pub created_at: DateTime<chrono::Utc>,
+    pub updated_at: DateTime<chrono::Utc>,
 }

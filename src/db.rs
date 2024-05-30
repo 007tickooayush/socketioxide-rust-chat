@@ -4,10 +4,11 @@ use mongodb::bson::{doc, Document};
 use mongodb::{bson, Collection, IndexModel};
 use mongodb::options::FindOptions;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use tracing::info;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
 use crate::errors::MyError;
-use crate::model::{Message};
+use crate::model::{Message, SocketResponse};
 
 /// override the standard result type for the module
 type Result<T> = std::result::Result<T, MyError>;
@@ -155,7 +156,7 @@ impl DB {
     }
 
     /// get the list of sockets
-    pub async fn get_sockets(&self, limit: i64, page: i64) -> Result<Vec<SocketCollection>> {
+    pub async fn get_sockets(&self, limit: i64, page: i64) -> Result<Vec<SocketResponse>> {
         if let Some(collection) = &self.sockets_collection {
             let filter = FindOptions::builder()
                 .limit(limit)
@@ -167,25 +168,19 @@ impl DB {
                 Err(e) => return Err(MyError::MongoError(e))
             };
 
-            let mut sockets_list = Vec::new();
-
-            // while cursor.advance().await? {
-            //     let raw_doc = cursor.current().to_raw_document_buf();
-            //     info!("Raw Doc: {:?}", raw_doc);
-            //     let d:SocketCollection = bson::from_slice(raw_doc.as_bytes()).unwrap();
-            //     info!("Doc: {:?}", d);
-            //     // let socket: SocketCollection = bson::de::from_document(doc)?;
-            //     // sockets_list.push(socket);
-            // }
+            let mut sockets_list: Vec<SocketResponse> = Vec::new();
 
             while cursor.advance().await? {
-                let doc = bson::from_slice::<SocketCollection>(cursor.current().to_raw_document_buf().as_bytes()).unwrap();
-                sockets_list.push(SocketCollection {
-                    id: doc.id.clone(),
-                    socket: doc.socket.clone(),
-                    username: doc.username.clone(),
-                    created_at: doc.created_at.clone(),
-                    updated_at: doc.updated_at.clone(),
+                let doc = cursor.current().to_owned().to_document().unwrap();
+                let socket = bson::from_document::<SocketCollection>(doc).unwrap();
+
+                // info!("Socket: {:?}", &socket);
+                sockets_list.push(SocketResponse {
+                    id: socket.id.to_string(),
+                    socket: socket.socket.to_string(),
+                    username: socket.username.to_string(),
+                    created_at: socket.created_at,
+                    updated_at: socket.updated_at,
                 });
             }
 

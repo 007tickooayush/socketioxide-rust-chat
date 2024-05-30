@@ -12,8 +12,17 @@ pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>
     // JOIN THE SOCKET ID TO THE ROOM WITH THE SOCKET ID AS THE ROOM NAME
     socket.join(socket.id.clone()).ok();
 
+    // generator code kept in one line else prone to MessageHandler Errors
+    let name = names::Generator::default().next().unwrap();
+
+    let mut _socket_map = socket_state.socket_map.write().await;
+    _socket_map.insert(socket.id.clone().to_string(), name.clone());
+    // self.socket_map.write().await.insert(name.clone(), socket_id.clone());
+
+    socket_state.db.insert_socket_name(name.clone(), socket.id.clone().to_string()).await.unwrap();
+
     // The first and foremost event to be called when the socket is connected
-    socket.on("default", handle_default);
+    // socket.on("default", handle_default);
 
     socket.on("join_room",handle_join_room);
 
