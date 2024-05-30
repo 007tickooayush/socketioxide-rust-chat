@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use serde_json::Value;
 use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
 use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessageReq};
@@ -76,6 +77,13 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
     }).await;
 
     _socket.within(data.room.clone()).emit("response", response).ok();
+}
+
+pub async fn handle_disconnect(_socket: SocketRef, Data(data): Data<Value>, socket_state: State<Arc<SocketState>>) {
+    info!("Disconnect: {:?}", data);
+    let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
+    _socket.emit("response", "removed").ok();
+    _socket.disconnect().ok();
 }
 
 // /// The first and foremost event to be called when the socket is connected

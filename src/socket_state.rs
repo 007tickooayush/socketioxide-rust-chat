@@ -1,11 +1,13 @@
 use std::collections::{HashMap, VecDeque};
 use tokio::sync::RwLock;
+use tracing::info;
 use crate::db::DB;
 use crate::db_model::{PrivateMessageCollection};
 use crate::model::{Message, PrivateMessage, PrivateMessageReq};
 
 pub type RoomStore = HashMap<String, VecDeque<Message>>;
 pub type SocketMap = HashMap<String, String>;
+
 /// Utilizing the RwLock to store the messages in the room and using the DB instance as well to store messages for longer durations
 /// *This is a shared state between the WebSocket handlers*
 /// *The **tokio::sync::RwLock is used** to ensure that the messages are not accessed concurrently* and we have not used the std::sync::RwLock because it is not async
@@ -14,22 +16,30 @@ pub type SocketMap = HashMap<String, String>;
 pub struct SocketState {
     pub db: DB,
     pub messages: RwLock<RoomStore>,
-    pub socket_map: RwLock<SocketMap>
+    pub socket_map: RwLock<SocketMap>,
 }
 
 impl SocketState {
-
     /// Create a new instance of the SocketState
     pub fn new(db: DB) -> Self {
         Self {
             db,
             messages: RwLock::new(RoomStore::new()),
-            socket_map: RwLock::new(SocketMap::new())
+            socket_map: RwLock::new(SocketMap::new()),
         }
     }
 
-    /// Insert the socket id and the name into the socket map into `sockets_collection`
-    /// ALSO Maintain a HashMap<String,String> for the socket id and the name
+    /// Remove the socket from memory and DB once the socket disconnects from the server
+    pub async fn remove_socket(&self, socket_id: String) {
+        let mut _socket_map = self.socket_map.write().await;
+        _socket_map.retain(|_, v| v.as_str().ne(&socket_id));
+
+        info!("socket_map: {:?}", _socket_map);
+        self.db.remove_socket(socket_id).await;
+    }
+
+    // /// Insert the socket id and the name into the socket map into `sockets_collection`
+    // /// ALSO Maintain a HashMap<String,String> for the socket id and the name
     // pub async fn insert_socket_name(&self, socket_id: String) -> (String, String) {
     //     // GENERATE A RANDOM NAME FOR THE SOCKET ID AND INSERT INTO THE DB
     //     let name = names::Generator::default().next().unwrap();
@@ -67,7 +77,7 @@ impl SocketState {
             message: message.message.clone(),
             receiver: message.receiver.clone(),
             created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now()
+            updated_at: chrono::Utc::now(),
         };
         let resp = self.db.insert_private_message(private_msg).await.unwrap_or_else(|_| {
             PrivateMessageCollection {
@@ -76,7 +86,7 @@ impl SocketState {
                 receiver: "".to_string(),
                 message: String::from("Error: Message not sent!"),
                 created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now()
+                updated_at: chrono::Utc::now(),
             }
         });
 
@@ -84,8 +94,7 @@ impl SocketState {
             message: resp.message,
             sender: resp.sender,
             receiver: resp.receiver,
-            date_time: resp.created_at
+            date_time: resp.created_at,
         }
-
     }
 }

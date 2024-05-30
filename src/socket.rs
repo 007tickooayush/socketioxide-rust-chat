@@ -1,7 +1,8 @@
 use std::sync::Arc;
-use socketioxide::extract::{SocketRef, State};
+use serde_json::Value;
+use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
-use crate::socket_handlers::{handle_join_room, handle_message, handle_private};
+use crate::socket_handlers::{handle_disconnect, handle_join_room, handle_message, handle_private};
 use crate::socket_state::SocketState;
 
 /// todo: INITIALIZE THE SOCKET IDS INTO A VARIABLE PAIRED TO A USERNAME <br/>
@@ -24,9 +25,23 @@ pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>
     // The first and foremost event to be called when the socket is connected
     // socket.on("default", handle_default);
 
-    socket.on("join_room",handle_join_room);
+    socket.on("join_room", handle_join_room);
 
     socket.on("private", handle_private);
 
     socket.on("message", handle_message);
+
+    socket.on("remove", handle_disconnect);
+
+    // todo: need to store a reverse socket id map i.e, Map(socket-id,name) to get the name of the socket id and remove from memory
+    socket.on("get_sockets", |socket_ref: SocketRef, Data::<Value>(data), socket_state: State<Arc<SocketState>>| async move {
+        let socket_m = socket_state.socket_map.read().await;
+        let mut vec = String::from("sockets:");
+        socket_m.iter().for_each(|(_, v)| {
+
+            vec.push_str(String::from(v.clone()+",").as_str());
+
+        });
+        socket_ref.emit("sockets", vec).ok();
+    });
 }

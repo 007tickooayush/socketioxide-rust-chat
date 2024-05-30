@@ -4,6 +4,7 @@ use mongodb::bson::{doc, Document};
 use mongodb::{bson, Collection, IndexModel};
 use mongodb::options::FindOptions;
 use serde::de::DeserializeOwned;
+use tracing::info;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
 use crate::errors::MyError;
 use crate::model::{Message, SocketResponse};
@@ -185,6 +186,13 @@ impl DB {
             Ok(sockets_list)
         } else {
             Err(MyError::OwnError(String::from("Messages collection not found")))
+        }
+    }
+
+    pub async fn remove_socket(&self, socket: String) {
+        if let Some(collection) = &self.sockets_collection {
+            let res = collection.delete_one(doc! {"socket": socket}, None).await.unwrap();
+            info!("Removed: {:?}", res);
         }
     }
 }
