@@ -1,12 +1,13 @@
 use std::sync::Arc;
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
-use serde_json::Value;
-use tracing::{info, warn};
+use serde_json::{json, Value};
+use tracing::{error, info, warn};
 use crate::AppState;
-use crate::model::{GeneralRequest, GeneralResponse};
+use crate::errors::MyError;
+use crate::model::{Filter, GeneralRequest, GeneralResponse};
 
 /// ### In this handler, we are going to emit a message to the client using the HTTP request handler
 /// *i.e, whenever the HTTP endpoint is hit, we are going to emit a message to the client and in this case we are broadcasting the message across all clients*
@@ -46,8 +47,13 @@ pub async fn http_socket_post_handler(
 /// - Providing the list of sockets connected to the server creates a form of vulnerability, and is not to be used in realtime applications.<br/>
 /// <br/>
 /// The function can be upgraded to fetch the socket details stored in any storage system like Redis, MongoDB, etc.
-pub async fn http_sockets_list(State(app_state): State<Arc<AppState>>) -> impl IntoResponse {
-    let sockets: Vec<String> = app_state.io.sockets().unwrap().iter().map(|socket| {
+pub async fn http_sockets_list(
+    filter: Option<Query<Filter>>,
+    State(app_state): State<Arc<AppState>>
+) -> impl IntoResponse {
+
+    // OLD IMPLEMENTATION
+    /*let sockets: Vec<String> = app_state.io.sockets().unwrap().iter().map(|socket| {
         socket.id.clone().to_string()
     }).collect();
 
@@ -55,5 +61,24 @@ pub async fn http_sockets_list(State(app_state): State<Arc<AppState>>) -> impl I
         (StatusCode::NOT_FOUND, Json(vec![]))
     } else {
         (StatusCode::FOUND, Json(sockets))
-    }
+    }*/
+
+    // NEW IMPLEMENTATION
+    let Query(filter) = filter.unwrap_or_default();
+
+    // set the default values
+    let limit = filter.limit.unwrap_or(10) as i64;
+    let page = filter.page.unwrap_or(1) as i64;
+
+    return match app_state.db.get_sockets(limit, page).await.map_err(MyError::from) {
+        Ok(res) => {
+            (StatusCode::OK, Json(res))
+        },
+        Err(e) => {
+            error!("Error: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::new()))
+        }
+    };
+
+
 }

@@ -44,3 +44,9 @@ pub struct PrivateMessageReq {
     pub sender: Option<String>,
     pub receiver: String
 }
+
+#[derive(Deserialize, Debug, Default)]
+pub struct Filter {
+    pub page: Option<usize>,
+    pub limit: Option<usize>
+}

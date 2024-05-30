@@ -5,7 +5,7 @@ use crate::db_model::{PrivateMessageCollection};
 use crate::model::{Message, PrivateMessage, PrivateMessageReq};
 
 pub type RoomStore = HashMap<String, VecDeque<Message>>;
-
+pub type SocketMap = HashMap<String, String>;
 /// Utilizing the RwLock to store the messages in the room and using the DB instance as well to store messages for longer durations
 /// *This is a shared state between the WebSocket handlers*
 /// *The **tokio::sync::RwLock is used** to ensure that the messages are not accessed concurrently* and we have not used the std::sync::RwLock because it is not async
@@ -13,7 +13,8 @@ pub type RoomStore = HashMap<String, VecDeque<Message>>;
 #[derive(Debug)]
 pub struct SocketState {
     pub db: DB,
-    pub messages: RwLock<RoomStore>
+    pub messages: RwLock<RoomStore>,
+    pub socket_map: RwLock<SocketMap>
 }
 
 impl SocketState {
@@ -22,8 +23,24 @@ impl SocketState {
     pub fn new(db: DB) -> Self {
         Self {
             db,
-            messages: RwLock::new(RoomStore::new())
+            messages: RwLock::new(RoomStore::new()),
+            socket_map: RwLock::new(SocketMap::new())
         }
+    }
+
+    /// Insert the socket id and the name into the socket map into `sockets_collection`
+    /// ALSO Maintain a HashMap<String,String> for the socket id and the name
+    pub async fn insert_socket_name(&self, socket_id: String) -> (String, String) {
+        // GENERATE A RANDOM NAME FOR THE SOCKET ID AND INSERT INTO THE DB
+        let name = names::Generator::default().next().unwrap();
+
+        let mut _socket_map = self.socket_map.write().await;
+        _socket_map.insert(socket_id.clone(), name.clone());
+        // self.socket_map.write().await.insert(name.clone(), socket_id.clone());
+
+        self.db.insert_socket_name(name.clone(), socket_id.clone()).await.unwrap();
+
+        (name, socket_id)
     }
 
     /// push the messages to top of the queue and insert the message to the database

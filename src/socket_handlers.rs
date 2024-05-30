@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use axum::Json;
+use serde_json::{json, Value};
 use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
 use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessageReq};
@@ -49,7 +51,7 @@ pub async fn handle_private(_socket: SocketRef, Data(data): Data<PrivateMessageR
         receiver: data.receiver.clone(),
     };
 
-// INSERT THE MESSAGE INTO DB
+    // INSERT THE MESSAGE INTO DB
     socket_state.insert_private_messages(response.clone()).await;
 
     _socket.to(data.receiver.clone()).emit("resp", response).ok();
@@ -76,4 +78,11 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
     }).await;
 
     _socket.within(data.room.clone()).emit("response", response).ok();
+}
+
+/// The first and foremost event to be called when the socket is connected
+/// in order to create the map for usernames and socket id
+pub async fn handle_default(_socket: SocketRef, socket_state: State<Arc<SocketState>>) {
+    let (name, socket) = socket_state.insert_socket_name(_socket.id.clone().to_string()).await;
+    _socket.emit("name", json!({ "name": name, "socket": socket })).ok();
 }

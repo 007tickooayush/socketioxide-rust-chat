@@ -2,7 +2,9 @@ use std::cell::RefCell;
 use bson::oid::ObjectId;
 use mongodb::bson::{doc, Document};
 use mongodb::{bson, Collection, IndexModel};
+use mongodb::options::FindOptions;
 use serde::de::DeserializeOwned;
+use tracing::info;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
 use crate::errors::MyError;
 use crate::model::{Message};
@@ -43,7 +45,7 @@ impl DB {
         Ok(DB {
             sockets_collection,
             messages_collection,
-            private_messages_collection
+            private_messages_collection,
         })
     }
     pub fn message_to_doc(&self, message: &Message) -> Result<MessageCollection> {
@@ -100,16 +102,16 @@ impl DB {
         }
     }
 
-    pub async fn find_message_oid(&self, oid:ObjectId) -> Result<MessageCollection> {
-        self.find_msg_by_oid(&self.messages_collection, oid).await
+    pub async fn find_message_oid(&self, oid: ObjectId) -> Result<MessageCollection> {
+        self.find_doc_by_oid(&self.messages_collection, oid).await
     }
     pub async fn find_private_message_oid(&self, oid: ObjectId) -> Result<PrivateMessageCollection> {
-        self.find_msg_by_oid(&self.private_messages_collection, oid).await
+        self.find_doc_by_oid(&self.private_messages_collection, oid).await
     }
 
-    pub async fn find_msg_by_oid<T>(&self, collection: &Option<Collection<T>>, oid: ObjectId) -> Result<T>
-    where
-        T: DeserializeOwned + Unpin + Send + Sync
+    pub async fn find_doc_by_oid<T>(&self, collection: &Option<Collection<T>>, oid: ObjectId) -> Result<T>
+        where
+            T: DeserializeOwned + Unpin + Send + Sync
     {
         if let Some(collection) = &collection {
             let resp = match collection.find_one(doc! {"_id": oid}, None).await {
@@ -118,10 +120,76 @@ impl DB {
                         Some(doc) => doc,
                         None => return Err(MyError::OwnError(String::from("Message not found")))
                     }
-                },
+                }
                 Err(e) => return Err(MyError::MongoError(e))
             };
             Ok(resp)
+        } else {
+            Err(MyError::OwnError(String::from("Messages collection not found")))
+        }
+    }
+
+    /// Create a DB entry for socket id mapped to name
+    ///
+    pub async fn insert_socket_name(&self, username: String, socket: String) -> Result<SocketCollection> {
+        if let Some(collection) = &self.sockets_collection {
+            let doc = SocketCollection {
+                id: ObjectId::new(),
+                socket,
+                username,
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            };
+            let insert_res = match collection.insert_one(&doc, None).await {
+                Ok(res) => res,
+                Err(e) => return Err(MyError::MongoError(e))
+            };
+
+            let oid = insert_res.inserted_id.as_object_id().unwrap();
+            let resp = self.find_doc_by_oid(&self.sockets_collection, oid).await?;
+
+            Ok(resp)
+        } else {
+            Err(MyError::OwnError(String::from("Messages collection not found")))
+        }
+    }
+
+    /// get the list of sockets
+    pub async fn get_sockets(&self, limit: i64, page: i64) -> Result<Vec<SocketCollection>> {
+        if let Some(collection) = &self.sockets_collection {
+            let filter = FindOptions::builder()
+                .limit(limit)
+                .skip(u64::try_from((page - 1) * limit).unwrap())
+                .build();
+
+            let mut cursor = match collection.find(None, filter).await {
+                Ok(res) => res,
+                Err(e) => return Err(MyError::MongoError(e))
+            };
+
+            let mut sockets_list = Vec::new();
+
+            // while cursor.advance().await? {
+            //     let raw_doc = cursor.current().to_raw_document_buf();
+            //     info!("Raw Doc: {:?}", raw_doc);
+            //     let d:SocketCollection = bson::from_slice(raw_doc.as_bytes()).unwrap();
+            //     info!("Doc: {:?}", d);
+            //     // let socket: SocketCollection = bson::de::from_document(doc)?;
+            //     // sockets_list.push(socket);
+            // }
+
+            while cursor.advance().await? {
+                let doc = bson::from_slice::<SocketCollection>(cursor.current().to_raw_document_buf().as_bytes()).unwrap();
+                sockets_list.push(SocketCollection {
+                    id: doc.id.clone(),
+                    socket: doc.socket.clone(),
+                    username: doc.username.clone(),
+                    created_at: doc.created_at.clone(),
+                    updated_at: doc.updated_at.clone(),
+                });
+            }
+
+            Ok(sockets_list)
         } else {
             Err(MyError::OwnError(String::from("Messages collection not found")))
         }
