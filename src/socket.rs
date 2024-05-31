@@ -1,6 +1,5 @@
 use std::sync::Arc;
-use serde_json::Value;
-use socketioxide::extract::{Data, SocketRef, State};
+use socketioxide::extract::{SocketRef, State};
 use tracing::info;
 use crate::socket_handlers::{handle_disconnect, handle_join_room, handle_message, handle_private};
 use crate::socket_state::SocketState;
@@ -16,8 +15,9 @@ pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>
     // generator code kept in one line else prone to MessageHandler Errors
     let name = names::Generator::default().next().unwrap();
 
-    let mut _socket_map = socket_state.socket_map.write().await;
-    _socket_map.insert(socket.id.clone().to_string(), name.clone());
+    // todo: NOT Storing the socket id and the name in the memory store
+    // let mut _socket_map = socket_state.socket_map.write().await;
+    // _socket_map.insert(socket.id.clone().to_string(), name.clone());
     // self.socket_map.write().await.insert(name.clone(), socket_id.clone());
 
     socket_state.db.insert_socket_name(name.clone(), socket.id.clone().to_string()).await.unwrap();
@@ -32,16 +32,4 @@ pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>
     socket.on("message", handle_message);
 
     socket.on("remove", handle_disconnect);
-
-    // todo: need to store a reverse socket id map i.e, Map(socket-id,name) to get the name of the socket id and remove from memory
-    socket.on("get_sockets", |socket_ref: SocketRef, Data::<Value>(data), socket_state: State<Arc<SocketState>>| async move {
-        let socket_m = socket_state.socket_map.read().await;
-        let mut vec = String::from("sockets:");
-        socket_m.iter().for_each(|(_, v)| {
-
-            vec.push_str(String::from(v.clone()+",").as_str());
-
-        });
-        socket_ref.emit("sockets", vec).ok();
-    });
 }

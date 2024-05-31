@@ -1,12 +1,11 @@
 use std::collections::{HashMap, VecDeque};
 use tokio::sync::RwLock;
-use tracing::info;
 use crate::db::DB;
 use crate::db_model::{PrivateMessageCollection};
 use crate::model::{Message, PrivateMessage, PrivateMessageReq};
 
 pub type RoomStore = HashMap<String, VecDeque<Message>>;
-pub type SocketMap = HashMap<String, String>;
+// pub type SocketMap = HashMap<String, String>;
 
 /// Utilizing the RwLock to store the messages in the room and using the DB instance as well to store messages for longer durations
 /// *This is a shared state between the WebSocket handlers*
@@ -16,7 +15,7 @@ pub type SocketMap = HashMap<String, String>;
 pub struct SocketState {
     pub db: DB,
     pub messages: RwLock<RoomStore>,
-    pub socket_map: RwLock<SocketMap>,
+    // pub socket_map: RwLock<SocketMap>,
 }
 
 impl SocketState {
@@ -25,16 +24,16 @@ impl SocketState {
         Self {
             db,
             messages: RwLock::new(RoomStore::new()),
-            socket_map: RwLock::new(SocketMap::new()),
+            // socket_map: RwLock::new(SocketMap::new()),
         }
     }
 
     /// Remove the socket from memory and DB once the socket disconnects from the server
     pub async fn remove_socket(&self, socket_id: String) {
-        let mut _socket_map = self.socket_map.write().await;
-        _socket_map.retain(|_, v| v.as_str().ne(&socket_id));
+        // let mut _socket_map = self.socket_map.write().await;
+        // _socket_map.retain(|_, v| v.as_str().ne(&socket_id));
 
-        info!("socket_map: {:?}", _socket_map);
+        // info!("socket_map: {:?}", _socket_map);
         self.db.remove_socket(socket_id).await;
     }
 
