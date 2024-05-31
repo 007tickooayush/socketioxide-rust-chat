@@ -60,3 +60,13 @@ pub struct SocketResponse {
     pub created_at: DateTime<chrono::Utc>,
     pub updated_at: DateTime<chrono::Utc>,
 }
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct PaginationResponse<T> {
+    pub data: Vec<T>,
+    pub curr_page: i64,
+    pub total_pages: i64,
+    pub total_records: i64,
+    pub next_page: Option<i64>,
+    pub prev_page: Option<i64>
+}

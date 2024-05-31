@@ -7,7 +7,7 @@ use serde::de::DeserializeOwned;
 use tracing::info;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
 use crate::errors::MyError;
-use crate::model::{Message, SocketResponse};
+use crate::model::{Message, PaginationResponse, SocketResponse};
 
 /// override the standard result type for the module
 type Result<T> = std::result::Result<T, MyError>;
@@ -155,7 +155,7 @@ impl DB {
     }
 
     /// get the list of sockets
-    pub async fn get_sockets(&self, limit: i64, page: i64) -> Result<Vec<SocketResponse>> {
+    pub async fn get_sockets(&self, limit: i64, page: i64) -> Result<PaginationResponse<SocketResponse>> {
         if let Some(collection) = &self.sockets_collection {
             let filter = FindOptions::builder()
                 .limit(limit)
@@ -183,7 +183,28 @@ impl DB {
                 });
             }
 
-            Ok(sockets_list)
+            let next = if sockets_list.len() as i64 == limit {
+                Some(page + 1)
+            } else {
+                None
+            };
+            let prev = if page > 1 {
+                Some(page - 1)
+            } else {
+                None
+            };
+            let pages = collection.estimated_document_count(None).await.unwrap() as i64 / limit;
+            let total = collection.estimated_document_count(None).await.unwrap() as i64;
+
+            let response = PaginationResponse {
+                data: sockets_list,
+                curr_page: page,
+                next_page: next,
+                prev_page: prev,
+                total_pages: pages,
+                total_records: total
+            };
+            Ok(response)
         } else {
             Err(MyError::OwnError(String::from("Messages collection not found")))
         }
