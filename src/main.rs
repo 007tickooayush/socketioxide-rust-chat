@@ -11,6 +11,7 @@ mod socket_handlers;
 use std::sync::Arc;
 use axum::http::{HeaderValue, Method};
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use dotenv::dotenv;
 use socketioxide::SocketIo;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
@@ -27,9 +28,20 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    dotenv().ok();
     const PORT: i32 = 4040;
 
     let db = DB::connect_mongo().await.unwrap();
+
+    let origins = std::env::var("ORIGINS")
+        .unwrap_or("http://localhost:3000,http://localhost:3001,http://localhost:5173".to_owned())
+        .replace("[","")
+        .replace("]","")
+        .split(",")
+        .map(|origin| origin.parse::<HeaderValue>().unwrap())
+        .collect::<Vec<HeaderValue>>();
+
+    println!("Origins: {:?}", origins);
 
     // For Logging the different events in the application in three categories (info, warn, error)
     tracing::subscriber::set_global_default(fmt::Subscriber::default()).unwrap();
@@ -42,7 +54,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     io.ns("/", on_connect);
 
     let cors = CorsLayer::new()
-        .allow_origin(["http:localhost:3000".parse::<HeaderValue>().unwrap()])
+        // .allow_origin(["http://localhost:3000".parse::<HeaderValue>().unwrap()])
+        .allow_origin(origins)
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
