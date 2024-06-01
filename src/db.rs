@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use bson::oid::ObjectId;
 use mongodb::bson::{doc, Document};
 use mongodb::{bson, Collection, IndexModel};
-use mongodb::options::FindOptions;
+use mongodb::options::{CountOptions, FindOptions};
 use serde::de::DeserializeOwned;
 use tracing::info;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
@@ -27,19 +27,27 @@ impl DB {
         let messages_collection = Some(db.collection("messages"));
         let private_messages_collection = Some(db.collection("private_messages"));
 
-        let socket_idx = RefCell::new(IndexModel::builder()
+        let id_idx = IndexModel::builder()
             .keys(doc! {"_id": 1})
-            .build());
-        // sockets_collection.create_index(doc! {"id": 1}, None).await?;
+            .build();
+
+        let created_at_idx = IndexModel::builder()
+            .keys(doc! {"created_at": 1})
+            .build();
+
         if let Some(sockets_collection) = &sockets_collection {
-            sockets_collection.create_index(socket_idx.borrow().clone(), None).await?;
+            sockets_collection.create_index(id_idx.clone(), None).await?;
+            sockets_collection.create_index(created_at_idx.clone(), None).await?;
         }
+
         if let Some(messages_collection) = &messages_collection {
-            messages_collection.create_index(socket_idx.borrow().clone(), None).await?;
+            messages_collection.create_index(id_idx.clone(), None).await?;
+            messages_collection.create_index(created_at_idx.clone(), None).await?;
         }
 
         if let Some(private_messages_collection) = &private_messages_collection {
-            private_messages_collection.create_index(socket_idx.borrow().clone(), None).await?;
+            private_messages_collection.create_index(id_idx.clone(), None).await?;
+            private_messages_collection.create_index(created_at_idx.clone(), None).await?;
         }
 
         Ok(DB {
@@ -157,9 +165,11 @@ impl DB {
     /// get the list of sockets
     pub async fn get_sockets(&self, limit: i64, page: i64) -> Result<PaginationResponse<SocketResponse>> {
         if let Some(collection) = &self.sockets_collection {
+
             let filter = FindOptions::builder()
                 .limit(limit)
                 .skip(u64::try_from((page - 1) * limit).unwrap())
+                .sort(doc! {"updated_at": -1, "created_at": -1})
                 .build();
 
             let mut cursor = match collection.find(None, filter).await {
@@ -183,7 +193,10 @@ impl DB {
                 });
             }
 
-            let next = if sockets_list.len() as i64 == limit {
+            let count_options = CountOptions::builder()
+                .skip(u64::try_from(((page - 1) + 1) * limit).unwrap())
+                .build();
+            let next = if collection.count_documents(None, count_options).await? as i64 > 1 {
                 Some(page + 1)
             } else {
                 None
@@ -202,7 +215,7 @@ impl DB {
                 next_page: next,
                 prev_page: prev,
                 total_pages: pages,
-                total_records: total
+                total_records: total,
             };
             Ok(response)
         } else {
