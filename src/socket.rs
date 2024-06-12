@@ -22,6 +22,7 @@ pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>
 
     socket_state.db.insert_socket_name(name.clone(), socket.id.clone().to_string()).await.unwrap();
 
+    socket.emit("username", name.clone()).ok();
     // The first and foremost event to be called when the socket is connected
     // socket.on("default", handle_default);
 

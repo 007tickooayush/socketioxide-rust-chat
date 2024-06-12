@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use bson::oid::ObjectId;
 use mongodb::bson::{doc, Document};
 use mongodb::{bson, Collection, IndexModel};
