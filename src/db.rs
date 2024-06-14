@@ -58,6 +58,7 @@ impl DB {
     pub fn message_to_doc(&self, message: &Message) -> Result<MessageCollection> {
         Ok(MessageCollection {
             id: mongodb::bson::oid::ObjectId::new(),
+            sender: String::from(&message.sender),
             room: String::from(&message.room),
             message: String::from(&message.message),
             created_at: message.date_time,
@@ -68,6 +69,7 @@ impl DB {
     #[allow(dead_code)]
     pub fn doc_to_message(&self, doc: Document) -> Result<Message> {
         Ok(Message {
+            sender: doc.get_str("sender").unwrap().to_string(),
             room: doc.get_str("room").unwrap().to_string(),
             message: doc.get_str("message").unwrap().to_string(),
             date_time: doc.get_datetime("created_at").unwrap().to_chrono(),

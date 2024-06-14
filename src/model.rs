@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub struct GeneralRequest {
+    pub sender: String,
     pub room : String,
     pub message: String
 }
@@ -17,6 +18,7 @@ pub struct GeneralResponse {
 #[derive(Debug, Serialize, Clone)]
 pub struct Message{
     pub room: String,
+    pub sender: String,
     pub message: String,
     pub date_time: DateTime<chrono::Utc>
 }

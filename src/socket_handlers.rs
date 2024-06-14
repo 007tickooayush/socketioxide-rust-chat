@@ -17,6 +17,7 @@ use crate::model::Messages;
 /// provided by the `SocketState` struct implementation through `socketioxide` >v8.0 library
 pub async fn handle_join_room(_socket: SocketRef, Data(data): Data<GeneralRequest>, socket_state: State<Arc<SocketState>>) {
     let general = GeneralRequest {
+        sender: data.sender.clone(),
         room: data.room.clone(),
         message: data.message.clone(),
     };
@@ -72,6 +73,7 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
     // INSERT THE MESSAGE INTO DB
     socket_state.insert(&data.room, Message {
         room: data.room.clone(),
+        sender: data.sender.clone(),
         message: data.message.clone(),
         date_time: response.date_time.clone(),
     }).await;

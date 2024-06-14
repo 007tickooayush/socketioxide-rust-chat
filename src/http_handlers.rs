@@ -23,6 +23,7 @@ pub async fn http_socket_post_handler(
 ) -> Result<impl IntoResponse,(StatusCode, Json<Value>)> {
     let general = GeneralRequest {
         room: data.room.clone(),
+        sender: data.sender.clone(),
         message: data.message.clone()
     };
     info!("General: {:?}", &general);
