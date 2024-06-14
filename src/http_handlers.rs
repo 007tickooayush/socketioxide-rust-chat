@@ -31,6 +31,7 @@ pub async fn http_socket_post_handler(
     warn!("Sockets: {:?}", app_state.io.sockets());
 
     let response = GeneralResponse {
+        sender: general.sender.clone(),
         room: general.room.clone(),
         message: format!("Message By Client: {}", "HTTP Request").to_owned(),
         date_time: chrono::Utc::now()

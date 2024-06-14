@@ -10,6 +10,7 @@ pub struct GeneralRequest {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct GeneralResponse {
+    pub sender: String,
     pub room: String,
     pub message: String,
     pub date_time: DateTime<chrono::Utc>
@@ -17,8 +18,8 @@ pub struct GeneralResponse {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct Message{
-    pub room: String,
     pub sender: String,
+    pub room: String,
     pub message: String,
     pub date_time: DateTime<chrono::Utc>
 }
@@ -34,16 +35,16 @@ pub struct Messages {
 ///
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PrivateMessage {
-    pub message: String,
     pub sender: String,
+    pub message: String,
     pub receiver: String,
     pub date_time: DateTime<chrono::Utc>
 }
 
 #[derive(Clone,Debug, Serialize, Deserialize)]
 pub struct PrivateMessageReq {
-    pub message: String,
     pub sender: Option<String>,
+    pub message: String,
     pub receiver: String
 }
 

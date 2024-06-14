@@ -29,6 +29,7 @@ pub async fn handle_join_room(_socket: SocketRef, Data(data): Data<GeneralReques
 
 
     // let response = GeneralResponse {
+    //     sender: general.sender.clone(),
     //     room: general.room.clone(),
     //     message: format!("Room joined by client: {}", _socket.id).to_owned(),
     //     date_time: chrono::Utc::now(),
@@ -65,15 +66,17 @@ pub async fn handle_private(_socket: SocketRef, Data(data): Data<PrivateMessageR
 pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>, socket_state: State<Arc<SocketState>>) {
     info!("Message: {:?}", data);
     let response = GeneralResponse {
+        sender: data.sender.clone(),
         room: data.room.clone(),
-        message: format!("Message By Client: {}", data.message).to_owned(),
+        // message: format!("Message By Client: {}", data.message).to_owned(),
+        message: data.message.clone(),
         date_time: chrono::Utc::now(),
     };
 
     // INSERT THE MESSAGE INTO DB
     socket_state.insert(&data.room, Message {
-        room: data.room.clone(),
         sender: data.sender.clone(),
+        room: data.room.clone(),
         message: data.message.clone(),
         date_time: response.date_time.clone(),
     }).await;
