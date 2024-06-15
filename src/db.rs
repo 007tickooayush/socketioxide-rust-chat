@@ -95,6 +95,46 @@ impl DB {
         }
     }
 
+    pub async fn get_messages(&self, room: Option<String>) -> Result<Option<Vec<Message>>> {
+        if let Some(collection) = &self.messages_collection {
+            let filter = match room {
+                Some(room) => doc! {"room": room},
+                None => doc! {}
+            };
+
+            let find_options = FindOptions::builder()
+                .sort(doc! {"created_at": -1})
+                .limit(20)
+                .build();
+
+            let mut cursor = match collection.find(filter, find_options).await {
+                Ok(res) => res,
+                Err(e) => return Err(MyError::MongoError(e))
+            };
+
+            let mut results: Vec<Message> = Vec::new();
+
+            while cursor.advance().await? {
+                let doc = cursor.deserialize_current().unwrap();
+                results.push(Message {
+                    sender: doc.sender,
+                    room: doc.room,
+                    message: doc.message,
+                    date_time: doc.created_at,
+                });
+            }
+
+            if results.clone().is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(results))
+            }
+
+        } else {
+            Err(MyError::OwnError(String::from("Messages collection not found")))
+        }
+    }
+
     pub async fn insert_private_message(&self, message_collection: PrivateMessageCollection) -> Result<PrivateMessageCollection> {
         if let Some(collection) = &self.private_messages_collection {
             let insert_res = match collection.insert_one(&message_collection, None).await {
@@ -181,8 +221,9 @@ impl DB {
             let mut sockets_list: Vec<SocketResponse> = Vec::new();
 
             while cursor.advance().await? {
-                let doc = cursor.current().to_owned().to_document().unwrap();
-                let socket = bson::from_document::<SocketCollection>(doc).unwrap();
+                // let doc = cursor.current().to_owned().to_document().unwrap();
+                // let socket = bson::from_document::<SocketCollection>(doc).unwrap();
+                let socket = cursor.deserialize_current().unwrap();
 
                 // info!("Socket: {:?}", &socket);
                 sockets_list.push(SocketResponse {

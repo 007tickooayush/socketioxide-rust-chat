@@ -60,11 +60,19 @@ impl SocketState {
         self.db.insert_message(message).await.unwrap();
     }
 
-    /// get the messages from the room but not read from the db
+    /// get the messages from the room but not read from the db <br/>
+    /// if the DB is empty then fetch the messages from the stored state <br/>
+    /// Give first priority to the messages stored in DB but return in the same truncated limit (20) format
     pub async fn get_messages(&self, room: &str) -> Vec<Message> {
         let _messages = self.messages.read().await;
-        let _room = _messages.get(room).cloned().unwrap_or_default();
-        _room.into_iter().rev().collect()
+        let messages_db = self.db.get_messages(None).await.unwrap();
+
+        return if let Some(messages) = messages_db {
+            messages.clone()
+        } else {
+            let _room = _messages.get(room).cloned().unwrap_or_default();
+            _room.into_iter().rev().collect()
+        }
     }
 
     pub async fn insert_private_messages(&self, message: PrivateMessageReq) -> PrivateMessage {
