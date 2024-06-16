@@ -9,11 +9,13 @@ use crate::socket_state::SocketState;
 pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>) {
     info!("Socket Connected: {:?}", socket.id);
 
-    // JOIN THE SOCKET ID TO THE ROOM WITH THE SOCKET ID AS THE ROOM NAME
-    socket.join(socket.id.clone()).ok();
-
     // generator code kept in one line else prone to MessageHandler Errors
     let name = names::Generator::default().next().unwrap();
+
+    // JOIN THE USERNAME AND CREATE A PRIVATE CHAT ROOM
+    // AND NEVER EXPOSE THE ACTUAL SOCKET ID OF THE USER TO THE FRONTEND
+    socket.join(name.clone()).ok();
+    // socket.join(socket.id.clone()).ok();
 
     // todo: NOT Storing the socket id and the name in the memory store
     // let mut _socket_map = socket_state.socket_map.write().await;
