@@ -84,11 +84,16 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
     _socket.within(data.room.clone()).emit("response", response).ok();
 }
 
-pub async fn handle_disconnect(_socket: SocketRef, Data(data): Data<Value>, socket_state: State<Arc<SocketState>>) {
+pub async fn handle_removal(_socket: SocketRef, Data(data): Data<Value>, socket_state: State<Arc<SocketState>>) {
     info!("Disconnect: {:?}", data);
     let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
     _socket.emit("response", "removed").ok();
     _socket.disconnect().ok();
+}
+
+pub fn handle_disconnect_socket(_socket: SocketRef, _socket_state: State<Arc<SocketState>>) {
+    _socket.leave_all().ok();
+    info!("Socket Disconnected: {:?}", _socket.id);
 }
 
 // /// The first and foremost event to be called when the socket is connected
