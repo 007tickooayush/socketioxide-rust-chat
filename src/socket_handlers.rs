@@ -23,7 +23,11 @@ pub async fn handle_join_room(_socket: SocketRef, Data(data): Data<GeneralReques
     };
     info!("General: {:?}", &general);
 
-    _socket.leave_all().ok();
+    // _socket.leave_all().ok();
+
+    // Leave all the rooms except the username group room for private chats
+    socket_state.leave_all_expect_one(_socket.clone(), data.sender.clone()).await;
+
     _socket.join(general.room.clone()).ok();
     let messages = socket_state.get_messages(&general.room).await;
 

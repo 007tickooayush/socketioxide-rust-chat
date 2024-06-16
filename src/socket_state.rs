@@ -1,4 +1,5 @@
 use std::collections::{HashMap, VecDeque};
+use socketioxide::extract::SocketRef;
 use tokio::sync::RwLock;
 use crate::db::DB;
 use crate::db_model::{PrivateMessageCollection};
@@ -25,6 +26,20 @@ impl SocketState {
             db,
             messages: RwLock::new(RoomStore::new()),
             // socket_map: RwLock::new(SocketMap::new()),
+        }
+    }
+
+    /// Remove the connected user from all the other rooms expect the room created with the username<br/>
+    /// That room is used for receiving messages specifically from the other users,
+    /// that have the knowledge of the user with the specific username being active and connected to server
+    pub async fn leave_all_expect_one(&self, _socket: SocketRef, room_to_stay: String) {
+        let rooms = _socket.rooms().ok();
+        if let Some(rooms) = rooms {
+            for room in rooms {
+                if room.ne(&room_to_stay) {
+                    _socket.leave(room).ok();
+                }
+            }
         }
     }
 
@@ -79,7 +94,7 @@ impl SocketState {
         } else {
             let _room = _messages.get(room).cloned().unwrap_or_default();
             _room.into_iter().rev().collect()
-        }
+        };
     }
 
     pub async fn insert_private_messages(&self, message: PrivateMessageReq) -> PrivateMessage {
