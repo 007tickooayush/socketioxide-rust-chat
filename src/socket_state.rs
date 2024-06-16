@@ -65,7 +65,13 @@ impl SocketState {
     /// Give first priority to the messages stored in DB but return in the same truncated limit (20) format
     pub async fn get_messages(&self, room: &str) -> Vec<Message> {
         let _messages = self.messages.read().await;
-        let messages_db = self.db.get_messages(None).await.unwrap();
+        let messages_db;
+        if let Some(_room) = room {
+            messages_db = self.db.get_messages(Some(String::from(_room))).await?;
+        } else {
+            messages_db = self.db.get_messages(None).await.unwrap();
+        }
+
 
         return if let Some(messages) = messages_db {
             messages.clone()
