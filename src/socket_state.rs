@@ -44,12 +44,12 @@ impl SocketState {
     }
 
     /// Remove the socket from memory and DB once the socket disconnects from the server
-    pub async fn remove_socket(&self, socket_id: String) {
+    pub async fn remove_socket(&self, username: String) {
         // let mut _socket_map = self.socket_map.write().await;
         // _socket_map.retain(|_, v| v.as_str().ne(&socket_id));
 
         // info!("socket_map: {:?}", _socket_map);
-        self.db.remove_socket(socket_id).await;
+        self.db.remove_socket(username).await;
     }
 
     // /// Insert the socket id and the name into the socket map into `sockets_collection`

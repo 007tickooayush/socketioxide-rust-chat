@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use serde_json::Value;
 use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
 use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessageReq};
@@ -88,9 +87,10 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
     _socket.within(data.room.clone()).emit("response", response).ok();
 }
 
-pub async fn handle_removal(_socket: SocketRef, Data(data): Data<Value>, socket_state: State<Arc<SocketState>>) {
+pub async fn handle_removal(_socket: SocketRef, Data(data): Data<GeneralRequest>, socket_state: State<Arc<SocketState>>) {
     info!("Disconnect: {:?}", data);
-    let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
+    // let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
+    let _ = socket_state.remove_socket(data.sender).await;
     _socket.emit("response", "removed").ok();
     _socket.disconnect().ok();
 }

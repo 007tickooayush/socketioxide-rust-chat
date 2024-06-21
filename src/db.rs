@@ -265,9 +265,9 @@ impl DB {
         }
     }
 
-    pub async fn remove_socket(&self, socket: String) {
+    pub async fn remove_socket(&self, username: String) {
         if let Some(collection) = &self.sockets_collection {
-            let res = collection.delete_one(doc! {"socket": socket}, None).await.unwrap();
+            let res = collection.delete_one(doc! {"username": username}, None).await.unwrap();
             info!("Removed: {:?}", res);
         }
     }
