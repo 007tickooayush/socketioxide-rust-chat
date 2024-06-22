@@ -91,12 +91,14 @@ pub async fn handle_removal(_socket: SocketRef, Data(data): Data<GeneralRequest>
     info!("Disconnect: {:?}", data);
     // let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
     let _ = socket_state.remove_socket(data.sender.clone()).await;
-    _socket.emit("removed", GeneralResponse {
-        sender: data.sender.clone(),
-        room: data.room.clone(),
-        message: format!("User: {} has been removed from the room", data.sender).to_owned(),
-        date_time: chrono::Utc::now(),
-    }).ok();
+
+    // Will not send the data to the client as the client is already disconnected
+    // _socket.emit("removed", GeneralResponse {
+    //     sender: data.sender.clone(),
+    //     room: data.room.clone(),
+    //     message: format!("User: {} has been removed from the room", data.sender).to_owned(),
+    //     date_time: chrono::Utc::now(),
+    // }).ok();
     _socket.disconnect().ok();
 }
 
