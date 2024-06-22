@@ -302,14 +302,12 @@ impl DB {
         }
     }
 
-    // todo: implement the user registration and login and generated username mapping via "upsert" options
     pub async fn handle_user(&self, user: User) -> Result<UserCollection> {
         if let Some(collection) = &self.users_collection {
 
             // let mut session = collection.client().start_session(None).await?;
             // session.start_transaction(None).await?;
 
-            // todo!("encapsulate all in a transaction")
             let user = UserCollection {
                 id: bson::oid::ObjectId::new(),
                 owned_uname: user.username.clone(),
@@ -319,7 +317,6 @@ impl DB {
                 created_at: chrono::Utc::now(),
             };
 
-            info!("User Collection: {:?}", &user);
             let found_res = collection.find_one(doc! {"owned_uname": user.owned_uname.clone()}, None).await.unwrap();
             let final_res;
 

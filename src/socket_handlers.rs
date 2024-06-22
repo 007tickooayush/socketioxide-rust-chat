@@ -90,8 +90,6 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
 /// Handle the user linking to the generated unique username <br/>
 /// Enable the user to map its owned username to the generated username, which is mapped with socket id and changes with each connection
 pub async fn handle_user_join(_socket: SocketRef, Data(data): Data<User>, socket_state: State<Arc<SocketState>>) {
-//     todo: create the functionality to create the user in db and map the user to the generated username
-//     todo: NOTE: Keep the generated username empty for the entry for first time user or if the username is not provided
 
     info!("User Join: {:?}", data);
     let user_resp = socket_state.handle_user(data.clone()).await;
