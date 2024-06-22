@@ -90,8 +90,13 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
 pub async fn handle_removal(_socket: SocketRef, Data(data): Data<GeneralRequest>, socket_state: State<Arc<SocketState>>) {
     info!("Disconnect: {:?}", data);
     // let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
-    let _ = socket_state.remove_socket(data.sender).await;
-    _socket.emit("response", "removed").ok();
+    let _ = socket_state.remove_socket(data.sender.clone()).await;
+    _socket.emit("removed", GeneralResponse {
+        sender: data.sender.clone(),
+        room: data.room.clone(),
+        message: format!("User: {} has been removed from the room", data.sender).to_owned(),
+        date_time: chrono::Utc::now(),
+    }).ok();
     _socket.disconnect().ok();
 }
 
