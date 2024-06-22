@@ -1,12 +1,13 @@
 use bson::oid::ObjectId;
+use chrono::Utc;
 use mongodb::bson::{doc, Document};
-use mongodb::{bson, Collection, IndexModel};
-use mongodb::options::{CountOptions, FindOptions, IndexOptions};
+use mongodb::{bson, ClientSession, Collection, IndexModel};
+use mongodb::options::{CountOptions, FindOptions};
 use serde::de::DeserializeOwned;
 use tracing::info;
 use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection, UserCollection};
 use crate::errors::MyError;
-use crate::model::{Message, PaginationResponse, SocketResponse};
+use crate::model::{Message, PaginationResponse, SocketResponse, User};
 
 /// override the standard result type for the module
 type Result<T> = std::result::Result<T, MyError>;
@@ -21,7 +22,7 @@ pub struct DB {
 
 impl DB {
     pub async fn connect_mongo() -> Result<DB> {
-        let client = mongodb::Client::with_uri_str("mongodb://localhost:27017").await?;
+        let client = mongodb::Client::with_uri_str("mongodb://localhost:27017/?retryWrites=false").await?;
         let db = client.database("socketioxide");
         let sockets_collection = Some(db.collection("sockets"));
         let messages_collection = Some(db.collection("messages"));
@@ -175,26 +176,40 @@ impl DB {
     }
 
     pub async fn find_message_oid(&self, oid: ObjectId) -> Result<MessageCollection> {
-        self.find_doc_by_oid(&self.messages_collection, oid).await
+        self.find_doc_by_oid(&self.messages_collection, oid,None).await
     }
     pub async fn find_private_message_oid(&self, oid: ObjectId) -> Result<PrivateMessageCollection> {
-        self.find_doc_by_oid(&self.private_messages_collection, oid).await
+        self.find_doc_by_oid(&self.private_messages_collection, oid, None).await
     }
 
-    pub async fn find_doc_by_oid<T>(&self, collection: &Option<Collection<T>>, oid: ObjectId) -> Result<T>
+    pub async fn find_doc_by_oid<T>(&self, collection: &Option<Collection<T>>, oid: ObjectId, session: Option<&mut ClientSession>) -> Result<T>
     where
         T: DeserializeOwned + Unpin + Send + Sync,
     {
         if let Some(collection) = &collection {
-            let resp = match collection.find_one(doc! {"_id": oid}, None).await {
-                Ok(res) => {
-                    match res {
-                        Some(doc) => doc,
-                        None => return Err(MyError::OwnError(String::from("Message not found")))
+            let resp;
+            if let Some(session) = session{
+                resp = match collection.find_one_with_session(doc! {"_id": oid}, None, session).await {
+                    Ok(res) => {
+                        match res {
+                            Some(doc) => doc,
+                            None => return Err(MyError::OwnError(String::from("Message not found")))
+                        }
                     }
-                }
-                Err(e) => return Err(MyError::MongoError(e))
-            };
+                    Err(e) => return Err(MyError::MongoError(e))
+                };
+            } else {
+                resp = match collection.find_one(doc! {"_id": oid}, None).await {
+                    Ok(res) => {
+                        match res {
+                            Some(doc) => doc,
+                            None => return Err(MyError::OwnError(String::from("Message not found")))
+                        }
+                    }
+                    Err(e) => return Err(MyError::MongoError(e))
+                };
+            }
+
             Ok(resp)
         } else {
             Err(MyError::OwnError(String::from("Messages collection not found")))
@@ -218,7 +233,7 @@ impl DB {
             };
 
             let oid = insert_res.inserted_id.as_object_id().unwrap();
-            let resp = self.find_doc_by_oid(&self.sockets_collection, oid).await?;
+            let resp = self.find_doc_by_oid(&self.sockets_collection, oid, None).await?;
 
             Ok(resp)
         } else {
@@ -288,9 +303,64 @@ impl DB {
     }
 
     // todo: implement the user registration and login and generated username mapping via "upsert" options
-    // pub async fn handle_user(&self, user: UserCollection) -> Result<UserCollection> {
-    //
-    // }
+    pub async fn handle_user(&self, user: User) -> Result<UserCollection> {
+        if let Some(collection) = &self.users_collection {
+
+            // let mut session = collection.client().start_session(None).await?;
+            // session.start_transaction(None).await?;
+
+            // todo!("encapsulate all in a transaction")
+            let user = UserCollection {
+                id: bson::oid::ObjectId::new(),
+                owned_uname: user.username.clone(),
+                cur_gen_uname: user.generated_username.clone(),
+                last_username: "".to_string(),
+                updated_at: chrono::Utc::now(),
+                created_at: chrono::Utc::now(),
+            };
+
+            info!("User Collection: {:?}", &user);
+            let found_res = collection.find_one(doc! {"owned_uname": user.owned_uname.clone()}, None).await.unwrap();
+            let final_res;
+
+            if let Some(res) = found_res {
+                let last = res.cur_gen_uname.clone();
+
+                collection.update_one(doc! {
+                    "owned_uname": user.owned_uname.clone()
+                }, doc! {
+                    "$set": {
+                        "cur_gen_uname": user.cur_gen_uname.clone(),
+                        "last_username": last,
+                        "updated_at": Utc::now()
+                    }
+                },
+                None).await?;
+
+                final_res = self.find_doc_by_oid(&self.users_collection, res.id, None).await?;
+            } else {
+                let inserted = collection.insert_one(&user, None).await?;
+
+                final_res = self.find_doc_by_oid(&self.users_collection, inserted.inserted_id.as_object_id().unwrap(), None).await?;
+            }
+
+            // session.commit_transaction().await?;
+
+            Ok(final_res)
+
+            // let insert_res = match collection.insert_one(&user, None).await {
+            //     Ok(res) => res,
+            //     Err(e) => return Err(MyError::MongoError(e))
+            // };
+            // let oid = insert_res.inserted_id.as_object_id().unwrap();
+            //
+            // let verified = self.find_doc_by_oid(&self.users_collection, oid).await?;
+            //
+            // Ok(verified)
+        } else {
+            Err(MyError::OwnError(String::from("Messages collection not found")))
+        }
+    }
 
     pub async fn remove_socket(&self, username: String) {
         if let Some(collection) = &self.sockets_collection {

@@ -16,10 +16,18 @@ pub struct GeneralResponse {
     pub date_time: DateTime<chrono::Utc>
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub username: String,
     pub generated_username: String
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserResp {
+    pub owned_uname: String,
+    pub cur_gen_uname: String,
+    pub updated_at: DateTime<chrono::Utc>,
+    pub created_at: DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Serialize,  Clone)]

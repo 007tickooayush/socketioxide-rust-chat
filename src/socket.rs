@@ -29,7 +29,7 @@ pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>
     // The first and foremost event to be called when the socket is connected
     // socket.on("default", handle_default);
 
-    socket.on("user_join",handle_user_join);
+    socket.on("user_handle",handle_user_join);
 
     socket.on("join_room", handle_join_room);
 

@@ -3,7 +3,7 @@ use socketioxide::extract::SocketRef;
 use tokio::sync::RwLock;
 use crate::db::DB;
 use crate::db_model::{PrivateMessageCollection};
-use crate::model::{Message, PrivateMessage, PrivateMessageReq};
+use crate::model::{Message, PrivateMessage, PrivateMessageReq, User, UserResp};
 
 pub type RoomStore = HashMap<String, VecDeque<Message>>;
 // pub type SocketMap = HashMap<String, String>;
@@ -124,6 +124,18 @@ impl SocketState {
             sender: resp.sender,
             receiver: resp.receiver,
             date_time: resp.created_at,
+        }
+    }
+
+    pub async fn handle_user(&self, user: User) -> UserResp {
+
+        let resp = self.db.handle_user(user).await.unwrap();
+
+        UserResp {
+            owned_uname: resp.owned_uname,
+            cur_gen_uname: resp.cur_gen_uname,
+            updated_at: resp.updated_at,
+            created_at: resp.created_at,
         }
     }
 }

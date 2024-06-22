@@ -92,7 +92,12 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
 pub async fn handle_user_join(_socket: SocketRef, Data(data): Data<User>, socket_state: State<Arc<SocketState>>) {
 //     todo: create the functionality to create the user in db and map the user to the generated username
 //     todo: NOTE: Keep the generated username empty for the entry for first time user or if the username is not provided
-//     info!("User Join: {:?}", data);
+
+    info!("User Join: {:?}", data);
+    let user_resp = socket_state.handle_user(data.clone()).await;
+
+    _socket.emit("user_handled", user_resp).ok();
+
 //     let response = User {
 //         username: data.username.clone(),
 //         generated_username: data.generated_username.clone(),
