@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use socketioxide::extract::{SocketRef, State};
 use tracing::info;
-use crate::socket_handlers::{handle_removal, handle_join_room, handle_message, handle_private, handle_disconnect_socket};
+use crate::socket_handlers::{handle_removal, handle_join_room, handle_message, handle_private, handle_disconnect_socket, handle_user_join};
 use crate::socket_state::SocketState;
 
 /// todo: INITIALIZE THE SOCKET IDS INTO A VARIABLE PAIRED TO A USERNAME <br/>
@@ -28,6 +28,8 @@ pub async fn on_connect(socket: SocketRef, socket_state: State<Arc<SocketState>>
     socket.emit("username", name.clone()).ok();
     // The first and foremost event to be called when the socket is connected
     // socket.on("default", handle_default);
+
+    socket.on("user_join",handle_user_join);
 
     socket.on("join_room", handle_join_room);
 

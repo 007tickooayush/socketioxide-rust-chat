@@ -1,10 +1,10 @@
 use bson::oid::ObjectId;
 use mongodb::bson::{doc, Document};
 use mongodb::{bson, Collection, IndexModel};
-use mongodb::options::{CountOptions, FindOptions};
+use mongodb::options::{CountOptions, FindOptions, IndexOptions};
 use serde::de::DeserializeOwned;
 use tracing::info;
-use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection};
+use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection, UserCollection};
 use crate::errors::MyError;
 use crate::model::{Message, PaginationResponse, SocketResponse};
 
@@ -16,6 +16,7 @@ pub struct DB {
     pub sockets_collection: Option<Collection<SocketCollection>>,
     pub messages_collection: Option<Collection<MessageCollection>>,
     pub private_messages_collection: Option<Collection<PrivateMessageCollection>>,
+    pub users_collection: Option<Collection<UserCollection>>,
 }
 
 impl DB {
@@ -25,6 +26,7 @@ impl DB {
         let sockets_collection = Some(db.collection("sockets"));
         let messages_collection = Some(db.collection("messages"));
         let private_messages_collection = Some(db.collection("private_messages"));
+        let users_collection = Some(db.collection("users"));
 
         let id_idx = IndexModel::builder()
             .keys(doc! {"_id": 1})
@@ -37,22 +39,44 @@ impl DB {
         if let Some(sockets_collection) = &sockets_collection {
             sockets_collection.create_index(id_idx.clone(), None).await?;
             sockets_collection.create_index(created_at_idx.clone(), None).await?;
+            sockets_collection.create_index(
+                IndexModel::builder().keys(doc! {"username": "text"}).build(),
+                None,
+            ).await?;
         }
 
         if let Some(messages_collection) = &messages_collection {
             messages_collection.create_index(id_idx.clone(), None).await?;
             messages_collection.create_index(created_at_idx.clone(), None).await?;
+            messages_collection.create_index(
+                IndexModel::builder().keys(doc! {"room": "text"}).build(),
+                None,
+            ).await?;
         }
 
         if let Some(private_messages_collection) = &private_messages_collection {
             private_messages_collection.create_index(id_idx.clone(), None).await?;
             private_messages_collection.create_index(created_at_idx.clone(), None).await?;
+            private_messages_collection.create_index(
+                IndexModel::builder().keys(doc! {"sender": "text"}).build(),
+                None,
+            ).await?;
+        }
+
+        if let Some(users_collection) = &users_collection {
+            users_collection.create_index(id_idx.clone(), None).await?;
+            users_collection.create_index(created_at_idx.clone(), None).await?;
+            users_collection.create_index(
+                IndexModel::builder().keys(doc! {"owned_uname": "text"}).build(),
+                None,
+            ).await?;
         }
 
         Ok(DB {
             sockets_collection,
             messages_collection,
             private_messages_collection,
+            users_collection,
         })
     }
     pub fn message_to_doc(&self, message: &Message) -> Result<MessageCollection> {
@@ -129,7 +153,6 @@ impl DB {
             } else {
                 Ok(Some(results))
             }
-
         } else {
             Err(MyError::OwnError(String::from("Messages collection not found")))
         }
@@ -159,8 +182,8 @@ impl DB {
     }
 
     pub async fn find_doc_by_oid<T>(&self, collection: &Option<Collection<T>>, oid: ObjectId) -> Result<T>
-        where
-            T: DeserializeOwned + Unpin + Send + Sync
+    where
+        T: DeserializeOwned + Unpin + Send + Sync,
     {
         if let Some(collection) = &collection {
             let resp = match collection.find_one(doc! {"_id": oid}, None).await {
@@ -206,7 +229,6 @@ impl DB {
     /// get the list of sockets
     pub async fn get_sockets(&self, limit: i64, page: i64) -> Result<PaginationResponse<SocketResponse>> {
         if let Some(collection) = &self.sockets_collection {
-
             let filter = FindOptions::builder()
                 .limit(limit)
                 .skip(u64::try_from((page - 1) * limit).unwrap())
@@ -264,6 +286,11 @@ impl DB {
             Err(MyError::OwnError(String::from("Messages collection not found")))
         }
     }
+
+    // todo: implement the user registration and login and generated username mapping via "upsert" options
+    // pub async fn handle_user(&self, user: UserCollection) -> Result<UserCollection> {
+    //
+    // }
 
     pub async fn remove_socket(&self, username: String) {
         if let Some(collection) = &self.sockets_collection {

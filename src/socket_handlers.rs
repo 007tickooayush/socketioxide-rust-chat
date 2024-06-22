@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
-use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessageReq};
+use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessageReq, User};
 use crate::socket_state::SocketState;
 use crate::model::Messages;
 
@@ -87,6 +87,27 @@ pub async fn handle_message(_socket: SocketRef, Data(data): Data<GeneralRequest>
     _socket.within(data.room.clone()).emit("response", response).ok();
 }
 
+/// Handle the user linking to the generated unique username <br/>
+/// Enable the user to map its owned username to the generated username, which is mapped with socket id and changes with each connection
+pub async fn handle_user_join(_socket: SocketRef, Data(data): Data<User>, socket_state: State<Arc<SocketState>>) {
+//     todo: create the functionality to create the user in db and map the user to the generated username
+//     todo: NOTE: Keep the generated username empty for the entry for first time user or if the username is not provided
+//     info!("User Join: {:?}", data);
+//     let response = User {
+//         username: data.username.clone(),
+//         generated_username: data.generated_username.clone(),
+//     };
+//
+//     // INSERT THE MESSAGE INTO DB
+//     // socket_state.insert(&data.room, Message {
+//     //     sender: data.sender.clone(),
+//     //     room: data.room.clone(),
+//     //     message: data.message.clone(),
+//     //     date_time: response.date_time.clone(),
+//     // }).await;
+//
+//     _socket.emit("user_joined", response).ok();
+}
 pub async fn handle_removal(_socket: SocketRef, Data(data): Data<GeneralRequest>, socket_state: State<Arc<SocketState>>) {
     info!("Disconnect: {:?}", data);
     // let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;

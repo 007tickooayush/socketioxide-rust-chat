@@ -39,3 +39,16 @@ pub struct PrivateMessageCollection {
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub created_at: DateTime<chrono::Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserCollection {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
+    pub owned_uname: String,
+    pub cur_gen_uname: String,
+    pub last_username: String,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub updated_at: DateTime<chrono::Utc>,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub created_at: DateTime<chrono::Utc>,
+}

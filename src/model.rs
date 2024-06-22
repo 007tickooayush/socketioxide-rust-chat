@@ -16,6 +16,12 @@ pub struct GeneralResponse {
     pub date_time: DateTime<chrono::Utc>
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
+    pub username: String,
+    pub generated_username: String
+}
+
 #[derive(Debug, Serialize,  Clone)]
 pub struct Message{
     pub sender: String,
