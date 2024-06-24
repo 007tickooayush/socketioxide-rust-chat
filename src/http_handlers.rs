@@ -3,11 +3,11 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
-use serde_json::{Value};
+use serde_json::Value;
 use tracing::{error, info, warn};
 use crate::AppState;
 use crate::errors::MyError;
-use crate::model::{Filter, GeneralRequest, GeneralResponse, PaginationResponse, SocketResponse};
+use crate::model::{Filter, GeneralRequest, GeneralResponse, PaginationResponse, SocketResponse, User, UserExists};
 
 /// ### In this handler, we are going to emit a message to the client using the HTTP request handler
 /// *i.e, whenever the HTTP endpoint is hit, we are going to emit a message to the client and in this case we are broadcasting the message across all clients*
@@ -92,4 +92,22 @@ pub async fn http_sockets_list(
     };
 
 
+}
+
+pub async fn check_user_exists(
+    State(state): State<Arc<AppState>>,
+    Json(data): Json<User>
+) -> Result<impl IntoResponse, (StatusCode, Json<UserExists>)> {
+
+    if let Some(res) = state.db.check_user_exists(data.username).await.unwrap() {
+        Ok((StatusCode::OK, Json(UserExists {
+            exists: true,
+            username: res.username
+        })))
+    } else {
+        Ok((StatusCode::NOT_FOUND, Json(UserExists {
+            exists: false,
+            username: "".to_owned()
+        })))
+    }
 }

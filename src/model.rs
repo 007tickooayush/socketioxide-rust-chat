@@ -22,6 +22,12 @@ pub struct User {
     pub generated_username: String
 }
 
+#[derive(Debug, Serialize,Clone)]
+pub struct UserExists {
+    pub exists: bool,
+    pub username: String
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserResp {
     pub owned_uname: String,

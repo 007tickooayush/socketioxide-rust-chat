@@ -171,7 +171,7 @@ impl DB {
 
             Ok(verified)
         } else {
-            Err(MyError::OwnError(String::from("Messages collection not found")))
+            Err(MyError::OwnError(String::from("Private Messages collection not found")))
         }
     }
 
@@ -212,7 +212,7 @@ impl DB {
 
             Ok(resp)
         } else {
-            Err(MyError::OwnError(String::from("Messages collection not found")))
+            Err(MyError::OwnError(String::from("Collection not found")))
         }
     }
 
@@ -237,7 +237,7 @@ impl DB {
 
             Ok(resp)
         } else {
-            Err(MyError::OwnError(String::from("Messages collection not found")))
+            Err(MyError::OwnError(String::from("Sockets collection not found")))
         }
     }
 
@@ -298,7 +298,7 @@ impl DB {
             };
             Ok(response)
         } else {
-            Err(MyError::OwnError(String::from("Messages collection not found")))
+            Err(MyError::OwnError(String::from("Sockets collection not found")))
         }
     }
 
@@ -355,10 +355,29 @@ impl DB {
             //
             // Ok(verified)
         } else {
-            Err(MyError::OwnError(String::from("Messages collection not found")))
+            Err(MyError::OwnError(String::from("Users collection not found")))
         }
     }
 
+    pub async fn check_user_exists(&self,username: String) -> Result<Option<User>> {
+        if let Some(collection) =  &self.users_collection {
+            collection.find_one(doc! {"owned_uname": username}, None).await
+                .map(|res| {
+                    match res {
+                        Some(doc) => {
+                            Some(User {
+                                username: doc.owned_uname,
+                                generated_username: doc.cur_gen_uname,
+                            })
+                        },
+                        None => None
+                    }
+                })
+                .map_err(MyError::from)
+        } else {
+            Err(MyError::OwnError(String::from("Users collection not found")))
+        }
+    }
     pub async fn remove_socket(&self, username: String) {
         if let Some(collection) = &self.sockets_collection {
             let res = collection.delete_one(doc! {"username": username}, None).await.unwrap();
