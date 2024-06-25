@@ -100,12 +100,12 @@ pub async fn check_user_exists(
 ) -> Result<impl IntoResponse, (StatusCode, Json<UserExists>)> {
 
     if let Some(res) = state.db.check_user_exists(data.username).await.unwrap() {
-        Ok((StatusCode::OK, Json(UserExists {
+        Ok((StatusCode::BAD_REQUEST, Json(UserExists {
             exists: true,
             username: res.username
         })))
     } else {
-        Ok((StatusCode::NOT_FOUND, Json(UserExists {
+        Ok((StatusCode::OK, Json(UserExists {
             exists: false,
             username: "".to_owned()
         })))
