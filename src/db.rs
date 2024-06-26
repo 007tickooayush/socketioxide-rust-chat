@@ -302,6 +302,9 @@ impl DB {
         }
     }
 
+    /// This is the function to read, validate and insert the data in form of a non-transaction <br/>
+    /// Multiple re-rendering of the state in frontend or the operations in the function may cause multiple writes or retryable writing of data <br/>
+    /// Those kind of operations might not be supported by the MongoDB driver provided<br/>
     pub async fn handle_user(&self, user: User) -> Result<UserCollection> {
         if let Some(collection) = &self.users_collection {
 
