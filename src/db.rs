@@ -22,7 +22,8 @@ pub struct DB {
 
 impl DB {
     pub async fn connect_mongo() -> Result<DB> {
-        let client = mongodb::Client::with_uri_str("mongodb://localhost:27017/?retryWrites=false").await?;
+
+        let client = mongodb::Client::with_uri_str(std::env::var("MONGO_URI").unwrap_or("mongodb://localhost:27017".to_owned())).await?;
         let db = client.database("socketioxide");
         let sockets_collection = Some(db.collection("sockets"));
         let messages_collection = Some(db.collection("messages"));
@@ -385,6 +386,48 @@ impl DB {
         if let Some(collection) = &self.sockets_collection {
             let res = collection.delete_one(doc! {"username": username}, None).await.unwrap();
             info!("Removed: {:?}", res);
+        }
+    }
+
+    pub async fn test_transaction(&self) -> Result<User> {
+        if let Some(collection) = &self.users_collection {
+            let mut session  = collection.client().start_session(None).await?;
+            session.start_transaction(None).await?;
+
+            let user = UserCollection {
+                id: bson::oid::ObjectId::new(),
+                owned_uname: "test".to_string(),
+                cur_gen_uname: "test".to_string(),
+                last_username: "".to_string(),
+                updated_at: chrono::Utc::now(),
+                created_at: chrono::Utc::now(),
+            };
+
+            let inserted = collection.insert_one_with_session(&user, None, &mut session).await?;
+            let resp;
+            if let Some(oid) = inserted.inserted_id.as_object_id() {
+
+                if let Some(found) = collection.find_one_with_session(doc! {"_id": oid}, None, &mut session).await? {
+                    resp = User {
+                        username: found.owned_uname,
+                        generated_username: found.cur_gen_uname,
+                    };
+                } else {
+                    resp = User {
+                        username: "".to_string(),
+                        generated_username: "".to_string(),
+                    };
+                }
+
+                collection.find_one_and_delete_with_session(doc! {"_id": oid}, None, &mut session).await?;
+            } else {
+                return Err(MyError::OwnError(String::from("Error in inserting the user")));
+            }
+
+            session.commit_transaction().await?;
+            Ok(resp)
+        } else {
+            Err(MyError::OwnError(String::from("Users collection not found")))
         }
     }
 }

@@ -111,3 +111,10 @@ pub async fn check_user_exists(
         })))
     }
 }
+
+pub async fn test_transaction(
+    State(state): State<Arc<AppState>>
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
+    let res = state.db.test_transaction().await.unwrap();
+    Ok((StatusCode::OK, Json(res)))
+}
