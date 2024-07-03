@@ -102,12 +102,14 @@ pub async fn check_user_exists(
     if let Some(res) = state.db.check_user_exists(data.username).await.unwrap() {
         Ok((StatusCode::FOUND, Json(UserExists {
             exists: true,
-            username: res.username
+            username: res.username,
+            generated_username: res.generated_username // current generated username
         })))
     } else {
         Ok((StatusCode::OK, Json(UserExists {
             exists: false,
-            username: "".to_owned()
+            username: "".to_owned(),
+            generated_username: "".to_owned()
         })))
     }
 }

@@ -25,7 +25,8 @@ pub struct User {
 #[derive(Debug, Serialize,Clone)]
 pub struct UserExists {
     pub exists: bool,
-    pub username: String
+    pub username: String,
+    pub generated_username: String
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
