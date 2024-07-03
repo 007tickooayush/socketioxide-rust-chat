@@ -94,7 +94,12 @@ pub async fn handle_user_join(_socket: SocketRef, Data(data): Data<User>, socket
     info!("User Join: {:?}", data);
     let user_resp = socket_state.handle_user(data.clone()).await;
 
+    info!("User Join Own Private: {:?}", data.username.clone());
+    // info: Only provided as a patch functionality
+    _socket.join(data.username).ok();
+
     _socket.emit("user_handled", user_resp).ok();
+
 
 //     let response = User {
 //         username: data.username.clone(),
