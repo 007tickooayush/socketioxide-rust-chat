@@ -44,21 +44,24 @@ pub async fn handle_join_room(_socket: SocketRef, Data(data): Data<GeneralReques
 }
 
 pub async fn handle_private(_socket: SocketRef, Data(data): Data<PrivateMessageReq>, socket_state: State<Arc<SocketState>>) {
-    info!("Private: {:?}", data);
+    // info!("Private: {:?}", data);
     let sender = match data.sender.clone() {
         Some(sender) => sender,
         None => _socket.id.clone().to_string()
     };
-    let response = PrivateMessageReq {
+    let message = PrivateMessageReq {
         message: data.message.to_owned(),
-        sender: Some(sender),
+        sender: Some(sender.clone()),
         receiver: data.receiver.clone(),
     };
 
     // INSERT THE MESSAGE INTO DB
-    socket_state.insert_private_messages(response.clone()).await;
+    let response = socket_state.insert_private_messages(message).await;
+    info!("Private Message: {:?}", response.clone());
 
-    _socket.to(data.receiver.clone()).emit("resp", response).ok();
+    _socket.to(data.receiver).emit("resp", response.clone()).ok(); // message to receiver
+    _socket.emit("resp_back", response).ok(); // message back to sender
+
 }
 
 
