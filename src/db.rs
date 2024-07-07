@@ -22,7 +22,6 @@ pub struct DB {
 
 impl DB {
     pub async fn connect_mongo() -> Result<DB> {
-
         let client = mongodb::Client::with_uri_str(std::env::var("MONGO_URI").unwrap_or("mongodb://localhost:27017".to_owned())).await?;
         let db = client.database("socketioxide");
         let sockets_collection = Some(db.collection("sockets"));
@@ -177,7 +176,7 @@ impl DB {
     }
 
     pub async fn find_message_oid(&self, oid: ObjectId) -> Result<MessageCollection> {
-        self.find_doc_by_oid(&self.messages_collection, oid,None).await
+        self.find_doc_by_oid(&self.messages_collection, oid, None).await
     }
     pub async fn find_private_message_oid(&self, oid: ObjectId) -> Result<PrivateMessageCollection> {
         self.find_doc_by_oid(&self.private_messages_collection, oid, None).await
@@ -189,7 +188,7 @@ impl DB {
     {
         if let Some(collection) = &collection {
             let resp;
-            if let Some(session) = session{
+            if let Some(session) = session {
                 resp = match collection.find_one_with_session(doc! {"_id": oid}, None, session).await {
                     Ok(res) => {
                         match res {
@@ -317,6 +316,7 @@ impl DB {
                 owned_uname: user.username.clone(),
                 cur_gen_uname: user.generated_username.clone(),
                 last_username: "".to_string(),
+                online: true,
                 updated_at: chrono::Utc::now(),
                 created_at: chrono::Utc::now(),
             };
@@ -332,11 +332,11 @@ impl DB {
                 }, doc! {
                     "$set": {
                         "cur_gen_uname": user.cur_gen_uname.clone(),
+                        "online": user.online,
                         "last_username": last,
                         "updated_at": Utc::now()
                     }
-                },
-                None).await?;
+                }, None).await?;
 
                 final_res = self.find_doc_by_oid(&self.users_collection, res.id, None).await?;
             } else {
@@ -363,8 +363,8 @@ impl DB {
         }
     }
 
-    pub async fn check_user_exists(&self,username: String) -> Result<Option<User>> {
-        if let Some(collection) =  &self.users_collection {
+    pub async fn check_user_exists(&self, username: String) -> Result<Option<User>> {
+        if let Some(collection) = &self.users_collection {
             collection.find_one(doc! {"owned_uname": username}, None).await
                 .map(|res| {
                     match res {
@@ -373,7 +373,7 @@ impl DB {
                                 username: doc.owned_uname,
                                 generated_username: doc.cur_gen_uname,
                             })
-                        },
+                        }
                         None => None
                     }
                 })
@@ -382,16 +382,21 @@ impl DB {
             Err(MyError::OwnError(String::from("Users collection not found")))
         }
     }
-    pub async fn remove_socket(&self, username: String) {
+    pub async fn remove_socket(&self, user: User) {
         if let Some(collection) = &self.sockets_collection {
-            let res = collection.delete_one(doc! {"username": username}, None).await.unwrap();
+            let res = collection.delete_one(doc! {"username": user.generated_username}, None).await.unwrap();
             info!("Removed: {:?}", res);
+        }
+
+        // mark the status as offline in users collection
+        if let Some(collection) = &self.users_collection {
+            collection.update_one(doc! {"owned_uname": user.username}, doc! {"$set": {"online": false, "updated_at": Utc::now()}}, None).await.unwrap();
         }
     }
 
     pub async fn test_transaction(&self) -> Result<User> {
         if let Some(collection) = &self.users_collection {
-            let mut session  = collection.client().start_session(None).await?;
+            let mut session = collection.client().start_session(None).await?;
             session.start_transaction(None).await?;
 
             let user = UserCollection {
@@ -399,6 +404,7 @@ impl DB {
                 owned_uname: "test".to_string(),
                 cur_gen_uname: "test".to_string(),
                 last_username: "".to_string(),
+                online: true,
                 updated_at: chrono::Utc::now(),
                 created_at: chrono::Utc::now(),
             };
@@ -406,7 +412,6 @@ impl DB {
             let inserted = collection.insert_one_with_session(&user, None, &mut session).await?;
             let resp;
             if let Some(oid) = inserted.inserted_id.as_object_id() {
-
                 if let Some(found) = collection.find_one_with_session(doc! {"_id": oid}, None, &mut session).await? {
                     resp = User {
                         username: found.owned_uname,

@@ -119,10 +119,10 @@ pub async fn handle_user_join(_socket: SocketRef, Data(data): Data<User>, socket
 //
 //     _socket.emit("user_joined", response).ok();
 }
-pub async fn handle_removal(_socket: SocketRef, Data(data): Data<GeneralRequest>, socket_state: State<Arc<SocketState>>) {
-    info!("Disconnect: {:?}", data);
+pub async fn handle_removal(_socket: SocketRef, Data(data): Data<User>, socket_state: State<Arc<SocketState>>) {
+    info!("Disconnect: {:?}", data.clone());
     // let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
-    let _ = socket_state.remove_socket(data.sender.clone()).await;
+    let _ = socket_state.remove_socket(data).await;
 
     // Will not send the data to the client as the client is already disconnected
     // _socket.emit("removed", GeneralResponse {

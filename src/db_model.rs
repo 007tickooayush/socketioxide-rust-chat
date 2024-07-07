@@ -47,6 +47,7 @@ pub struct UserCollection {
     pub owned_uname: String,
     pub cur_gen_uname: String,
     pub last_username: String,
+    pub online: bool,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub updated_at: DateTime<chrono::Utc>,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
