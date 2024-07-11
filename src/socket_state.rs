@@ -140,19 +140,37 @@ impl SocketState {
 
     /// Implementation for handling the event when the user is in the private window for chat
     pub async fn handle_private_joined(&self, user: InPrivate) -> InPrivate {
-        let res = self.db.handle_private_joined(user).await.unwrap();
-        InPrivate {
-            in_private: res.in_private,
-            username: res.owned_username,
+         match self.db.handle_private_joined(user).await {
+            Ok(res) => {
+                InPrivate {
+                    in_private: res.in_private,
+                    username: res.owned_username,
+                }
+            },
+            Err(e) => {
+                InPrivate {
+                    in_private: false,
+                    username: format!("ERROR: {:?}", e).to_owned(),
+                }
+            }
         }
     }
 
     /// Implementation for handling the event when the user is in the private window for chat
     pub async fn handle_private_left(&self, user: InPrivate) -> InPrivate {
-        let res = self.db.handle_private_left(user).await.unwrap();
-        InPrivate {
-            in_private: res.in_private,
-            username: res.owned_username,
+        match self.db.handle_private_left(user).await {
+            Ok(res) => {
+                InPrivate {
+                    in_private: res.in_private,
+                    username: res.owned_username,
+                }
+            },
+            Err(e) => {
+                InPrivate {
+                    in_private: false,
+                    username: format!("ERROR: {:?}", e).to_owned(),
+                }
+            }
         }
     }
 }

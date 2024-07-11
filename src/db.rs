@@ -407,48 +407,59 @@ impl DB {
     }
 
     pub async fn handle_private_joined(&self, user: InPrivate) -> Result<RoomCollection> {
-        if let Some(collection) = &self.room_collection {
-            match collection.find_one(doc! {"owned_username": user.username.clone()}, None).await? {
-                Some(room) => {
-                    let res = collection.find_one_and_update(
-                        doc! {
-                            "owned_username": room.owned_username
-                        },
-                        doc! {
-                            "$set": {
-                                "in_private": true,
-                                "updated_at": Utc::now()
-                            }
-                        }, None).await?;
+        if let Some(collection) = &self.users_collection {
+            match collection.find_one(doc! {"owned_uname": user.username.clone()}, None).await? {
+                Some(res) => {
 
-                    if let Some(res) = res {
-                        Ok(res)
+                    if let Some(collection) = &self.room_collection {
+                        match collection.find_one(doc! {"owned_username": res.owned_uname}, None).await? {
+                            Some(room) => {
+                                let res = collection.find_one_and_update(
+                                    doc! {
+                                        "owned_username": room.owned_username
+                                    },
+                                    doc! {
+                                        "$set": {
+                                            "in_private": true,
+                                            "updated_at": Utc::now()
+                                        }
+                                    }, None).await?;
+
+                                if let Some(res) = res {
+                                    Ok(res)
+                                } else {
+                                    Err(MyError::OwnError("Error while updating the room collection document".to_string()))
+                                }
+                            }
+                            None => {
+                                let room = RoomCollection {
+                                    id: ObjectId::new(),
+                                    room_name: None,
+                                    in_private: true,
+                                    owned_username: user.username.clone(),
+                                    updated_at: Utc::now(),
+                                    created_at: Utc::now(),
+                                };
+                                collection.insert_one(&room, None).await?;
+                                Ok(room)
+                            }
+                        }
                     } else {
-                        Err(MyError::OwnError("Error while updating the room collection document".to_string()))
+                        Err(MyError::OwnError(String::from("Room collection not found")))
                     }
                 }
                 None => {
-                    let room = RoomCollection {
-                        id: ObjectId::new(),
-                        room_name: None,
-                        in_private: true,
-                        owned_username: user.username.clone(),
-                        updated_at: Utc::now(),
-                        created_at: Utc::now(),
-                    };
-                    collection.insert_one(&room, None).await?;
-                    Ok(room)
+                    Err(MyError::OwnError("User not found".to_string()))
                 }
             }
         } else {
-            Err(MyError::OwnError(String::from("Room collection not found")))
+            Err(MyError::OwnError(String::from("Users collection not found")))
         }
     }
     pub async fn handle_private_left(&self, user: InPrivate) -> Result<RoomCollection> {
         if let Some(collection) = &self.room_collection {
             match collection.find_one(doc! {"owned_username": user.username.clone()}, None).await? {
                 Some(room) => {
-
                     let res = collection.find_one_and_update(
                         doc! {
                             "owned_username": room.owned_username
