@@ -53,3 +53,16 @@ pub struct UserCollection {
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub created_at: DateTime<chrono::Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoomCollection {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
+    pub room_name: Option<String>,
+    pub in_private: bool,
+    pub owned_username: String,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub updated_at: DateTime<chrono::Utc>,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub created_at: DateTime<chrono::Utc>,
+}

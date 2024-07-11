@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use socketioxide::extract::{Data, SocketRef, State};
 use tracing::info;
-use crate::model::{GeneralRequest, GeneralResponse, Message, PrivateMessageReq, User};
+use crate::model::{GeneralRequest, GeneralResponse, InPrivate, Message, PrivateMessageReq, User};
 use crate::socket_state::SocketState;
 use crate::model::Messages;
 
@@ -118,6 +118,20 @@ pub async fn handle_user_join(_socket: SocketRef, Data(data): Data<User>, socket
 //     // }).await;
 //
 //     _socket.emit("user_joined", response).ok();
+}
+
+pub async fn handle_private_joined(_socket: SocketRef, Data(data): Data<InPrivate>, socket_state: State<Arc<SocketState>>) {
+    info!("Private Joined: {:?}", data.clone());
+
+    let resp = socket_state.handle_private_joined(data).await;
+
+    _socket.emit("joined_private", resp).ok();
+}
+pub async fn handle_private_left(_socket: SocketRef, Data(data): Data<InPrivate>, socket_state: State<Arc<SocketState>>) {
+    info!("Private Left: {:?}", data.clone());
+
+    let resp = socket_state.handle_private_left(data).await;
+    _socket.emit("left_private", resp).ok();
 }
 pub async fn handle_removal(_socket: SocketRef, Data(data): Data<User>, socket_state: State<Arc<SocketState>>) {
     info!("Disconnect: {:?}", data.clone());

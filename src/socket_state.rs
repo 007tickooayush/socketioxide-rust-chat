@@ -3,7 +3,7 @@ use socketioxide::extract::SocketRef;
 use tokio::sync::RwLock;
 use crate::db::DB;
 use crate::db_model::{PrivateMessageCollection};
-use crate::model::{Message, PrivateMessage, PrivateMessageReq, User, UserResp};
+use crate::model::{InPrivate, Message, PrivateMessage, PrivateMessageReq, User, UserResp};
 
 pub type RoomStore = HashMap<String, VecDeque<Message>>;
 // pub type SocketMap = HashMap<String, String>;
@@ -128,7 +128,6 @@ impl SocketState {
     }
 
     pub async fn handle_user(&self, user: User) -> UserResp {
-
         let resp = self.db.handle_user(user).await.unwrap();
 
         UserResp {
@@ -136,6 +135,24 @@ impl SocketState {
             cur_gen_uname: resp.cur_gen_uname,
             updated_at: resp.updated_at,
             created_at: resp.created_at,
+        }
+    }
+
+    /// Implementation for handling the event when the user is in the private window for chat
+    pub async fn handle_private_joined(&self, user: InPrivate) -> InPrivate {
+        let res = self.db.handle_private_joined(user).await.unwrap();
+        InPrivate {
+            in_private: res.in_private,
+            username: res.owned_username,
+        }
+    }
+
+    /// Implementation for handling the event when the user is in the private window for chat
+    pub async fn handle_private_left(&self, user: InPrivate) -> InPrivate {
+        let res = self.db.handle_private_left(user).await.unwrap();
+        InPrivate {
+            in_private: res.in_private,
+            username: res.owned_username,
         }
     }
 }

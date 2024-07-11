@@ -5,9 +5,9 @@ use mongodb::{bson, ClientSession, Collection, IndexModel};
 use mongodb::options::{CountOptions, FindOptions};
 use serde::de::DeserializeOwned;
 use tracing::info;
-use crate::db_model::{MessageCollection, PrivateMessageCollection, SocketCollection, UserCollection};
+use crate::db_model::{MessageCollection, PrivateMessageCollection, RoomCollection, SocketCollection, UserCollection};
 use crate::errors::MyError;
-use crate::model::{Message, PaginationResponse, SocketResponse, User};
+use crate::model::{InPrivate, Message, PaginationResponse, SocketResponse, User};
 
 /// override the standard result type for the module
 type Result<T> = std::result::Result<T, MyError>;
@@ -18,6 +18,7 @@ pub struct DB {
     pub messages_collection: Option<Collection<MessageCollection>>,
     pub private_messages_collection: Option<Collection<PrivateMessageCollection>>,
     pub users_collection: Option<Collection<UserCollection>>,
+    pub room_collection: Option<Collection<RoomCollection>>,
 }
 
 impl DB {
@@ -28,13 +29,14 @@ impl DB {
         let messages_collection = Some(db.collection("messages"));
         let private_messages_collection = Some(db.collection("private_messages"));
         let users_collection = Some(db.collection("users"));
+        let room_collection = Some(db.collection("rooms"));
 
         let id_idx = IndexModel::builder()
             .keys(doc! {"_id": 1})
             .build();
 
         let created_at_idx = IndexModel::builder()
-            .keys(doc! {"created_at": 1})
+            .keys(doc! {"created_at": -1})
             .build();
 
         if let Some(sockets_collection) = &sockets_collection {
@@ -73,11 +75,21 @@ impl DB {
             ).await?;
         }
 
+        if let Some(room_collection) = &room_collection {
+            room_collection.create_index(id_idx.clone(), None).await?;
+            room_collection.create_index(created_at_idx.clone(), None).await?;
+            room_collection.create_index(
+                IndexModel::builder().keys(doc! {"owned_username": "text"}).build(),
+                None,
+            ).await?;
+        }
+
         Ok(DB {
             sockets_collection,
             messages_collection,
             private_messages_collection,
             users_collection,
+            room_collection,
         })
     }
     pub fn message_to_doc(&self, message: &Message) -> Result<MessageCollection> {
@@ -391,6 +403,74 @@ impl DB {
         // mark the status as offline in users collection
         if let Some(collection) = &self.users_collection {
             collection.update_one(doc! {"owned_uname": user.username}, doc! {"$set": {"online": false, "updated_at": Utc::now()}}, None).await.unwrap();
+        }
+    }
+
+    pub async fn handle_private_joined(&self, user: InPrivate) -> Result<RoomCollection> {
+        if let Some(collection) = &self.room_collection {
+            match collection.find_one(doc! {"owned_username": user.username.clone()}, None).await? {
+                Some(room) => {
+                    let res = collection.find_one_and_update(
+                        doc! {
+                            "owned_username": room.owned_username
+                        },
+                        doc! {
+                            "$set": {
+                                "in_private": true,
+                                "updated_at": Utc::now()
+                            }
+                        }, None).await?;
+
+                    if let Some(res) = res {
+                        Ok(res)
+                    } else {
+                        Err(MyError::OwnError("Error while updating the room collection document".to_string()))
+                    }
+                }
+                None => {
+                    let room = RoomCollection {
+                        id: ObjectId::new(),
+                        room_name: None,
+                        in_private: true,
+                        owned_username: user.username.clone(),
+                        updated_at: Utc::now(),
+                        created_at: Utc::now(),
+                    };
+                    collection.insert_one(&room, None).await?;
+                    Ok(room)
+                }
+            }
+        } else {
+            Err(MyError::OwnError(String::from("Room collection not found")))
+        }
+    }
+    pub async fn handle_private_left(&self, user: InPrivate) -> Result<RoomCollection> {
+        if let Some(collection) = &self.room_collection {
+            match collection.find_one(doc! {"owned_username": user.username.clone()}, None).await? {
+                Some(room) => {
+
+                    let res = collection.find_one_and_update(
+                        doc! {
+                            "owned_username": room.owned_username
+                        },
+                        doc! {
+                            "$set": {
+                                "in_private": false,
+                                "updated_at": Utc::now()
+                            }
+                        }, None).await?;
+                    if let Some(res) = res {
+                        Ok(res)
+                    } else {
+                        Err(MyError::OwnError("Error while updating the room collection document".to_string()))
+                    }
+                }
+                None => {
+                    Err(MyError::OwnError("The provided document does not exist in room collection.".to_string()))
+                }
+            }
+        } else {
+            Err(MyError::OwnError(String::from("Room collection not found")))
         }
     }
 
