@@ -484,6 +484,20 @@ impl DB {
             Err(MyError::OwnError(String::from("Room collection not found")))
         }
     }
+    pub async fn check_private_exists(&self, user: User ) -> Result<RoomCollection> {
+        if let Some(collection) = &self.room_collection {
+            match collection.find_one(doc! {"owned_username": user.username.clone()}, None).await? {
+                Some(room) => {
+                    Ok(room)
+                }
+                None => {
+                    Err(MyError::OwnError("the user has not initiated the private chats yet".to_string()))
+                }
+            }
+        } else {
+            Err(MyError::OwnError(String::from("Room collection not found")))
+        }
+    }
 
     pub async fn test_transaction(&self) -> Result<User> {
         if let Some(collection) = &self.users_collection {

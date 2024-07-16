@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
@@ -7,7 +7,7 @@ use serde_json::Value;
 use tracing::{error, info, warn};
 use crate::AppState;
 use crate::errors::MyError;
-use crate::model::{Filter, GeneralRequest, GeneralResponse, PaginationResponse, SocketResponse, User, UserExists};
+use crate::model::{Filter, GeneralRequest, GeneralResponse, InPrivate, PaginationResponse, SocketResponse, User, UserExists};
 
 /// ### In this handler, we are going to emit a message to the client using the HTTP request handler
 /// *i.e, whenever the HTTP endpoint is hit, we are going to emit a message to the client and in this case we are broadcasting the message across all clients*
@@ -19,12 +19,12 @@ pub async fn http_socket_handler(State(app_state): State<Arc<AppState>>) {
 /// Handling the POST request from the client
 pub async fn http_socket_post_handler(
     State(app_state): State<Arc<AppState>>,
-    Json(data): Json<GeneralRequest>
-) -> Result<impl IntoResponse,(StatusCode, Json<Value>)> {
+    Json(data): Json<GeneralRequest>,
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
     let general = GeneralRequest {
         room: data.room.clone(),
         sender: data.sender.clone(),
-        message: data.message.clone()
+        message: data.message.clone(),
     };
     info!("General: {:?}", &general);
 
@@ -34,7 +34,7 @@ pub async fn http_socket_post_handler(
         sender: general.sender.clone(),
         room: general.room.clone(),
         message: format!("Message By Client: {}", "HTTP Request").to_owned(),
-        date_time: chrono::Utc::now()
+        date_time: chrono::Utc::now(),
     };
     info!("Response: {:?}", &response);
 
@@ -52,7 +52,7 @@ pub async fn http_socket_post_handler(
 /// The function can be upgraded to fetch the socket details stored in any storage system like Redis, MongoDB, etc.
 pub async fn http_sockets_list(
     filter: Option<Query<Filter>>,
-    State(app_state): State<Arc<AppState>>
+    State(app_state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<PaginationResponse<SocketResponse>>)> {
 
     // OLD IMPLEMENTATION
@@ -77,7 +77,7 @@ pub async fn http_sockets_list(
         Ok(res) => {
             // info!("Sockets: {:?}", res);
             Ok((StatusCode::OK, Json(res)))
-        },
+        }
         Err(e) => {
             error!("Error: {:?}", e);
             Ok((StatusCode::INTERNAL_SERVER_ERROR, Json(PaginationResponse {
@@ -86,41 +86,56 @@ pub async fn http_sockets_list(
                 next_page: None,
                 prev_page: None,
                 total_records: 0,
-                total_pages: 0
+                total_pages: 0,
             })))
         }
     };
-
-
 }
 
 pub async fn check_user_exists(
     State(state): State<Arc<AppState>>,
-    Json(data): Json<User>
+    Json(data): Json<User>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<UserExists>)> {
-
     if let Some(res) = state.db.check_user_exists(data.username).await.unwrap() {
         Ok((StatusCode::FOUND, Json(UserExists {
             exists: true,
             username: res.username,
-            generated_username: res.generated_username // current generated username
+            generated_username: res.generated_username, // current generated username
         })))
     } else {
         Ok((StatusCode::OK, Json(UserExists {
             exists: false,
             username: "".to_owned(),
-            generated_username: "".to_owned()
+            generated_username: "".to_owned(),
         })))
     }
 }
 
 pub async fn check_user_in_private(
     Query(data): Query<User>,
-    State(state): State<Arc<AppState>>
-) ->  Result<impl IntoResponse, ()> {
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, Json<InPrivate>)> {
     info!("User: {:?}", data);
+    match state.db.check_private_exists(data).await.map_err(MyError::from) {
+        Ok(res) => {
+            let resp = InPrivate {
+                username: res.owned_username,
+                in_private: res.in_private,
+            };
 
-    Ok(())
+            Ok((StatusCode::FOUND, Json(resp)))
+        }
+        Err(e) => {
+            error!("Error: {:?}", e);
+            Ok((
+                StatusCode::NOT_FOUND,
+                Json(InPrivate {
+                    username: format!("ERROR: {:?}", e).to_owned(),
+                    in_private: false,
+                })
+            ))
+        }
+    }
 }
 
 pub async fn test_transaction(
