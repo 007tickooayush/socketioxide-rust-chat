@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
@@ -112,6 +112,15 @@ pub async fn check_user_exists(
             generated_username: "".to_owned()
         })))
     }
+}
+
+pub async fn check_user_in_private(
+    Query(data): Query<User>,
+    State(state): State<Arc<AppState>>
+) ->  Result<impl IntoResponse, ()> {
+    info!("User: {:?}", data);
+
+    Ok(())
 }
 
 pub async fn test_transaction(
