@@ -115,7 +115,7 @@ pub async fn check_user_in_private(
     Query(data): Query<User>,
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<InPrivate>)> {
-    info!("User: {:?}", data);
+    info!("User in Private: {:?}", data);
     match state.db.check_private_exists(data).await.map_err(MyError::from) {
         Ok(res) => {
             let resp = InPrivate {
