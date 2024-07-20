@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use socketioxide::extract::{Data, SocketRef, State};
+use socketioxide::socket::Socket;
 use tracing::info;
 use crate::model::{GeneralRequest, GeneralResponse, InPrivate, Message, PrivateMessageReq, User};
 use crate::socket_state::SocketState;
@@ -133,6 +134,12 @@ pub async fn handle_private_left(_socket: SocketRef, Data(data): Data<InPrivate>
     let resp = socket_state.handle_private_left(data).await;
     _socket.emit("left_private", resp).ok();
 }
+
+pub async fn handle_notify(_socket: SocketRef, Data(data): Data<PrivateMessageReq>, _socket_state: State<Arc<Socket>>) {
+    // _socket.emit("notified", data).ok();
+    _socket.to(data.receiver).emit("notified", data.message).ok();
+}
+
 pub async fn handle_removal(_socket: SocketRef, Data(data): Data<User>, socket_state: State<Arc<SocketState>>) {
     info!("Disconnect: {:?}", data.clone());
     // let _ = socket_state.remove_socket(_socket.id.clone().to_string()).await;
