@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use socketioxide::extract::{Data, SocketRef, State};
-use socketioxide::socket::Socket;
 use tracing::info;
 use crate::model::{GeneralRequest, GeneralResponse, InPrivate, Message, PrivateMessageReq, User};
 use crate::socket_state::SocketState;
@@ -135,8 +134,9 @@ pub async fn handle_private_left(_socket: SocketRef, Data(data): Data<InPrivate>
     _socket.emit("left_private", resp).ok();
 }
 
-pub async fn handle_notify(_socket: SocketRef, Data(data): Data<PrivateMessageReq>, _socket_state: State<Arc<Socket>>) {
+pub async fn handle_notify(_socket: SocketRef, Data(data): Data<PrivateMessageReq>, _socket_state: State<Arc<SocketState>>) {
     // _socket.emit("notified", data).ok();
+    info!("Notification: {:?}", data.clone());
     _socket.to(data.receiver).emit("notified", data.message).ok();
 }
 
